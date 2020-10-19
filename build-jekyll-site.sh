@@ -69,7 +69,6 @@ function post_build_deploy_preview(){
   if [ "$STATUSES_URL" != "" ]; then
     echo "post_build_deploy_preview"
     sudo chown -R www-data "$BUILDDIR"
-    chmod -R g+w "$BUILDDIR"
     # Move the built directory into the preview space
     mv "$BUILDDIR" /srv/websitepreview/
     # Send the status update to GitHub for the preview URL

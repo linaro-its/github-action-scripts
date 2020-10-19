@@ -68,8 +68,7 @@ function post_build_cleanup(){
 function post_build_deploy_preview(){
   if [ "$STATUSES_URL" != "" ]; then
     echo "post_build_deploy_preview"
-    # Change the group so that www-data can serve it
-    chgrp -R www-data "$BUILDDIR"
+    sudo chown -R www-data "$BUILDDIR"
     chmod -R g+w "$BUILDDIR"
     # Move the built directory into the preview space
     mv "$BUILDDIR" /srv/websitepreview/

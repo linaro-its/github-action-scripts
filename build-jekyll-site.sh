@@ -90,6 +90,7 @@ function post_build_failed_preview(){
 
 function docker_build_site() {
   echo "Building the site ..."
+  echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE:/srv/source linaroits/jekyllsitebuild:latest build-site.sh"
   docker run --rm \
     -t \
     --cap-drop ALL \
@@ -110,15 +111,15 @@ make_dirs || exit 1
 docker_build_site 2>&1 | tee "$GITHUB_WORKSPACE/../jekyll-output" ; pipe_status=${PIPESTATUS[0]}
 if [ $pipe_status != 0 ]
 then
-  # Success
-  post_build_cleanup
-  post_build_deploy_preview
-  touch "$GITHUB_WORKSPACE/../jekyll-success"
-  # Drop out of the script with the status returned by "touch"
-else
   # Failure
   post_build_cleanup
   post_build_failed_preview
   touch "$GITHUB_WORKSPACE/../jekyll-fail"
   exit 1
+else
+  # Success
+  post_build_cleanup
+  post_build_deploy_preview
+  touch "$GITHUB_WORKSPACE/../jekyll-success"
+  # Drop out of the script with the status returned by "touch"
 fi

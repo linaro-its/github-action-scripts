@@ -13,7 +13,7 @@ function setup_vars(){
     STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
     echo "PR_NUMBER=$PR_NUMBER"
     echo "STATUSES_URL=$STATUSES_URL"
-    echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+    echo "GITHUB_TOKEN=$GITHUB_TOKEN"
 }
 
 function make_dirs(){

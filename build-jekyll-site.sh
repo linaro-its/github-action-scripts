@@ -11,10 +11,6 @@ function setup_vars(){
     # SITE_URL
     PR_NUMBER=$(jq -r ".pull_request.number" $GITHUB_EVENT_PATH)
     STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
-    echo "PR_NUMBER=$PR_NUMBER"
-    echo "STATUSES_URL=$STATUSES_URL"
-    pwd
-    env > pjc.tmp
 }
 
 function make_dirs(){

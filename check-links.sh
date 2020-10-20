@@ -23,7 +23,8 @@ else
   BUILDDIR="/srv/websitepreview/$AWS_STATIC_SITE_URL-$PR_NUMBER"
 fi
 
-if ! "$DIR/check-links-3.py" -d "$BUILDDIR" -o "$GITHUB_WORKSPACE/../linktests-output" "$@"
+cd $DIR
+if ! pipenv run python check-links-3.py -d "$BUILDDIR" -o "$GITHUB_WORKSPACE/../linktests-output" "$@"
 then
   # If we *aren't* running a test build, output the results so that it is in the Bamboo log.
   if [ "$STATUSES_URL" == "" ]; then

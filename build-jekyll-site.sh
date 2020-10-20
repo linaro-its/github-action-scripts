@@ -13,7 +13,8 @@ function setup_vars(){
     STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
     echo "PR_NUMBER=$PR_NUMBER"
     echo "STATUSES_URL=$STATUSES_URL"
-    echo "TOKEN=$TOKEN"
+    pwd
+    env > pjc.tmp
 }
 
 function make_dirs(){
@@ -127,5 +128,3 @@ else
   touch "$GITHUB_WORKSPACE/../jekyll-success"
   # Drop out of the script with the status returned by "touch"
 fi
-
-pause 1h

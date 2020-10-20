@@ -107,20 +107,15 @@ cd "$GITHUB_WORKSPACE" || exit 1
 setup_vars
 setup_testing
 make_dirs || exit 1
-# Use PIPESTATUS to check the exit code from docker_build_site and
-# not the (successful) output from tee.
-docker_build_site 2>&1 | tee "$GITHUB_WORKSPACE/../jekyll-output" ; pipe_status=${PIPESTATUS[0]}
-if [ $pipe_status != 0 ]
+if [ ! docker_build_site ]
 then
   # Failure
   post_build_cleanup
   post_build_failed_preview
-  touch "$GITHUB_WORKSPACE/../jekyll-fail"
   exit 1
 else
   # Success
   post_build_cleanup
   post_build_deploy_preview
-  touch "$GITHUB_WORKSPACE/../jekyll-success"
-  # Drop out of the script with the status returned by "touch"
+  exit 0
 fi

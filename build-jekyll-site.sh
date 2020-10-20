@@ -107,8 +107,7 @@ cd "$GITHUB_WORKSPACE" || exit 1
 setup_vars
 setup_testing
 make_dirs || exit 1
-if [ ! docker_build_site ]
-then
+if ! docker_build_site; then
   # Failure
   post_build_cleanup
   post_build_failed_preview

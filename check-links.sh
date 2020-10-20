@@ -24,16 +24,9 @@ else
 fi
 
 cd $DIR
-if ! pipenv run python check-links-3.py -d "$BUILDDIR" -o "$GITHUB_WORKSPACE/../linktests-output" "$@"
+if ! pipenv run python check-links-3.py -d "$BUILDDIR" "$@"
 then
-  # If we *aren't* running a test build, output the results so that it is in the Bamboo log.
-  if [ "$STATUSES_URL" == "" ]; then
-    echo ""
-    cat "$GITHUB_WORKSPACE/../linktests-output"
-  fi
-  touch "$GITHUB_WORKSPACE/../linktests-fail"
   exit 1
 else
-  touch "$GITHUB_WORKSPACE/../linktests-success"
   exit 0
 fi

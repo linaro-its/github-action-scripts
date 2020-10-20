@@ -13,7 +13,7 @@ function setup_vars(){
     STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
     echo "PR_NUMBER=$PR_NUMBER"
     echo "STATUSES_URL=$STATUSES_URL"
-    echo "GITHUB_TOKEN=$GITHUB_TOKEN"
+    echo "TOKEN=$TOKEN"
 }
 
 function make_dirs(){
@@ -79,7 +79,7 @@ function post_build_deploy_preview(){
     mv "$BUILDDIR" /srv/websitepreview/
     # Send the status update to GitHub for the preview URL
     DATA="{\"state\": \"success\", \"target_url\": \"$URL\", \"context\": \"Deploy preview\", \"description\": \"Deployment complete\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -s -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL"
   fi
 }
 
@@ -88,7 +88,7 @@ function post_build_failed_preview(){
     echo "post_build_failed_preview"
     # Send the status update to GitHub to say it failed
     DATA="{\"state\": \"failure\", \"context\": \"Deploy preview\", \"description\": \"Deployment failed\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -s -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL"
   fi
 }
 

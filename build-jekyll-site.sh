@@ -70,7 +70,10 @@ function post_build_cleanup(){
 function post_build_deploy_preview(){
   if [ "$STATUSES_URL" != "" ]; then
     echo "post_build_deploy_preview"
-    sudo chown -R www-data "$BUILDDIR"
+    # Change group so that www-data can read the site for previews. We do this
+    # rather than owner so that the owner (ubuntu) continues to have rw perms
+    # which is important when cleaning up.
+    sudo chgrp -R www-data "$BUILDDIR"
     # Move the built directory into the preview space
     mv "$BUILDDIR" /srv/websitepreview/
     # Send the status update to GitHub for the preview URL

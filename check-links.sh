@@ -1,6 +1,7 @@
 #!/bin/bash
 # shellcheck disable=SC2154
 #
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 PR_NUMBER=$(jq -r ".pull_request.number" $GITHUB_EVENT_PATH)
 STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
 
@@ -22,7 +23,7 @@ else
   BUILDDIR="/srv/websitepreview/$AWS_STATIC_SITE_URL-$PR_NUMBER"
 fi
 
-if ! /srv/bamboo-task-scripts/check-links-3.py -d "$BUILDDIR" -o "$GITHUB_WORKSPACE/../linktests-output" "$@"
+if ! "$DIR/check-links-3.py" -d "$BUILDDIR" -o "$GITHUB_WORKSPACE/../linktests-output" "$@"
 then
   # If we *aren't* running a test build, output the results so that it is in the Bamboo log.
   if [ "$STATUSES_URL" == "" ]; then

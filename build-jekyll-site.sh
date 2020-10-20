@@ -127,3 +127,5 @@ else
   touch "$GITHUB_WORKSPACE/../jekyll-success"
   # Drop out of the script with the status returned by "touch"
 fi
+
+pause 1h

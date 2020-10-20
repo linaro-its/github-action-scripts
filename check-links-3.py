@@ -247,11 +247,11 @@ async def check_unique_links():
     # https://stackoverflow.com/questions/40347726/python-3-5-asyincio-and-aiohttp-errno-101-network-is-unreachable
     conn = aiohttp.TCPConnector(
         family=socket.AF_INET,
-        verify_ssl=False,
+        ssl=False,
         limit=500
     )
     async with aiohttp.ClientSession(connector=conn,
-                                     conn_timeout=60) as session:
+                                     timeout=60) as session:
         await async_check_web(session, unique_links)
     for p in file_link_pairs:
         # p[0] is the file path and p[1] is the URL.
@@ -437,7 +437,7 @@ if __name__ == '__main__':
     verbose = 0
     output_file = None
 
-    print("Linaro Link Checker (2018-10-01)")
+    print("Linaro Link Checker (2020-10-20)")
 
     if args.verbose is not None:
         verbose = args.verbose

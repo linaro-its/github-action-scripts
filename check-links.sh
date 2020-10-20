@@ -24,9 +24,4 @@ else
 fi
 
 cd $DIR
-if ! pipenv run python check-links-3.py -d "$BUILDDIR" "$@"
-then
-  exit 1
-else
-  exit 0
-fi
+pipenv run python check-links-3.py -d "$BUILDDIR" "$@"

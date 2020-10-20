@@ -54,7 +54,7 @@ EOF
 
 function post_build_cleanup(){
   if [ "$STATUSES_URL" != "" ]; then
-    echo "Post-build cleanup"
+    echo "post_build_cleanup"
     # Remove the temporary config file otherwise git will be a bit unhappy
     rm _config-testing.yml
     # If we already have a preview directory with this name, we need to remove
@@ -76,7 +76,7 @@ function post_build_deploy_preview(){
     mv "$BUILDDIR" /srv/websitepreview/
     # Send the status update to GitHub for the preview URL
     DATA="{\"state\": \"success\", \"target_url\": \"$URL\", \"context\": \"Deploy preview\", \"description\": \"Deployment complete\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -s -S -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL" >/dev/null
   fi
 }
 
@@ -85,7 +85,7 @@ function post_build_failed_preview(){
     echo "post_build_failed_preview"
     # Send the status update to GitHub to say it failed
     DATA="{\"state\": \"failure\", \"context\": \"Deploy preview\", \"description\": \"Deployment failed\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -s -S -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL" >/dev/null
   fi
 }
 
@@ -107,14 +107,12 @@ cd "$GITHUB_WORKSPACE" || exit 1
 setup_vars
 setup_testing
 make_dirs || exit 1
-if ! docker_build_site; then
-  # Failure
-  post_build_cleanup
+docker_build_site
+result=$?
+post_build_cleanup
+if [ $result -ne 0 ]; then
   post_build_failed_preview
-  exit 1
 else
-  # Success
-  post_build_cleanup
   post_build_deploy_preview
-  exit 0
 fi
+exit $result

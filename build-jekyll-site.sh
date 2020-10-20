@@ -73,7 +73,7 @@ function post_build_deploy_preview(){
     mv "$BUILDDIR" /srv/websitepreview/
     # Send the status update to GitHub for the preview URL
     DATA="{\"state\": \"success\", \"target_url\": \"$URL\", \"context\": \"Deploy preview\", \"description\": \"Deployment complete\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -v -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
   fi
 }
 
@@ -82,7 +82,7 @@ function post_build_failed_preview(){
     echo "post_build_failed_preview"
     # Send the status update to GitHub to say it failed
     DATA="{\"state\": \"failure\", \"context\": \"Deploy preview\", \"description\": \"Deployment failed\"}"
-    curl -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
+    curl -v -s -H "Content-Type: application/json" -H "Authorization: token $GITHUB_TOKEN" -d "$DATA" "$STATUSES_URL"
   fi
 }
 

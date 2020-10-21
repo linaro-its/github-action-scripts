@@ -6,12 +6,12 @@ if [ -d "$BUILDDIR" ]; then
     echo "Removing website review directory"
     rm -rf "$BUILDDIR"
 else
-    echo "No website review directory to remove"
+    echo "No website review directory ($BUILDDIR) to remove"
 fi
 A11YDIR="/srv/a11y.linaro.org/$AWS_STATIC_SITE_URL-$PR_NUMBER.websitepreview.linaro.org"
 if [ -d "$A11YDIR" ]; then
     echo "Removing $A11YDIR"
     rm -rf "$A11YDIR"
 else
-    echo "No a11y test to remove"
+    echo "No a11y test ($A11YDIR) to remove"
 fi

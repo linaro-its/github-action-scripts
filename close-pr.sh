@@ -1,7 +1,7 @@
 #!/bin/bash
 PR_NUMBER=$(jq -r ".pull_request.number" $GITHUB_EVENT_PATH)
 echo "Cleaning up after $PR_NUMBER has closed"
-BUILDDIR="$AWS_STATIC_SITE_URL-$PR_NUMBER"
+BUILDDIR="/srv/websitepreview/$AWS_STATIC_SITE_URL-$PR_NUMBER"
 if [ -d "$BUILDDIR" ]; then
     echo "Removing website review directory"
     rm -rf "$BUILDDIR"

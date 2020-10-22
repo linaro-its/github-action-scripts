@@ -21,7 +21,7 @@ function make_dirs(){
 }
 
 function setup_testing(){
-  if [ "STATUSES_URL" != "" ]; then
+  if [ "$STATUSES_URL" != "" ]; then
     echo "Setting up for testing"
     # What is the URL going to be for this site?
     BUILDDIR="$AWS_STATIC_SITE_URL-$PR_NUMBER"

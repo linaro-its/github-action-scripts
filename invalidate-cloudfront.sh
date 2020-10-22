@@ -17,6 +17,7 @@ until aws --profile "$AWS_STATIC_SITE_PROFILE" cloudfront wait invalidation-comp
             --distribution-id "$CF_DIST_ID_STATIC_LO}" --id "${invID}" 2>/dev/null
 do
     # Still waiting - output some progress
+    echo "Still waiting ..."
     aws --profile "$AWS_STATIC_SITE_PROFILE" cloudfront get-invalidation \
     --distribution-id "$CF_DIST_ID_STATIC_LO" --id "${invID}"
     sleep 10

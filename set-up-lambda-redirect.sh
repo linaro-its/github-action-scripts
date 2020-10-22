@@ -9,7 +9,10 @@ if [ -n "$1" ]; then
     fi
     if [ -d "$1/_data" ] && [ -f "$1/_data/routingrules.json" ]; then
         cd $DIR
+        echo "Processing $1/_data/routingrules.json"
         pipenv run python lambda-redirect.py -r "$1/_data/routingrules.json"
+    else
+        echo "No routing rules - skipping"
     fi
 else
     echo "No parameters provided - skipping"

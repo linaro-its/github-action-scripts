@@ -14,7 +14,7 @@ echo "======== POLLING COMPLETED INVALIDATION ========"
 # out with "max attempts exceeded". We now run this in a do loop to ensure that we repeat
 # the call until it is all finished.
 until aws --profile "$AWS_STATIC_SITE_PROFILE" cloudfront wait invalidation-completed \
-            --distribution-id "$CF_DIST_ID_STATIC_LO}" --id "${invID}" 2>/dev/null
+            --distribution-id "$CF_DIST_ID_STATIC_LO" --id "${invID}" 2>/dev/null
 do
     # Still waiting - output some progress
     echo "Still waiting ..."

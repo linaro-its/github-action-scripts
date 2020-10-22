@@ -9,6 +9,7 @@ verify_ssl = true
 bs4 = "*"
 aiohttp = "*"
 requests = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.8"

@@ -10,7 +10,7 @@ function setup_vars(){
     # JEKYLL_ENV
     # SITE_URL
     PR_NUMBER=$(jq -r ".pull_request.number" $GITHUB_EVENT_PATH)
-    STATUSES_URL=$(jq -r ".pull_request.statuses_url" $GITHUB_EVENT_PATH)
+    STATUSES_URL=$(jq -r ".pull_request.statuses_url // empty" $GITHUB_EVENT_PATH)
 }
 
 function make_dirs(){

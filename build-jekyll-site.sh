@@ -21,7 +21,7 @@ function make_dirs(){
 }
 
 function setup_testing(){
-  if [ "$STATUSES_URL" != "" ]; then
+  if [ ! -z "$STATUSES_URL" ]; then
     echo "Setting up for testing"
     # What is the URL going to be for this site?
     BUILDDIR="$AWS_STATIC_SITE_URL-$PR_NUMBER"
@@ -53,7 +53,7 @@ EOF
 }
 
 function post_build_cleanup(){
-  if [ "$STATUSES_URL" != "" ]; then
+  if [ ! -z "$STATUSES_URL" ]; then
     echo "post_build_cleanup"
     # Remove the temporary config file otherwise git will be a bit unhappy
     rm _config-testing.yml
@@ -66,7 +66,7 @@ function post_build_cleanup(){
 }
 
 function post_build_deploy_preview(){
-  if [ "$STATUSES_URL" != "" ]; then
+  if [ ! -z "$STATUSES_URL" ]; then
     echo "post_build_deploy_preview"
     # Change group so that www-data can read the site for previews. We do this
     # rather than owner so that the owner (ubuntu) continues to have rw perms
@@ -81,7 +81,7 @@ function post_build_deploy_preview(){
 }
 
 function post_build_failed_preview(){
-  if [ "$STATUSES_URL" != "" ]; then
+  if [ ! -z "$STATUSES_URL" ]; then
     echo "post_build_failed_preview"
     # Send the status update to GitHub to say it failed
     DATA="{\"state\": \"failure\", \"context\": \"Deploy preview\", \"description\": \"Deployment failed\"}"

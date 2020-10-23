@@ -25,7 +25,7 @@ function setup_testing(){
     echo "Setting up for testing"
     # What is the URL going to be for this site?
     BUILDDIR="$AWS_STATIC_SITE_URL-$PR_NUMBER"
-    URL="http://$BUILDDIR.websitepreview.linaro.org"
+    URL="http://$BUILDDIR.ghactions.linaro.org"
     cat > _config-testing.yml << EOF
 url: "$URL"
 destination: "$BUILDDIR"

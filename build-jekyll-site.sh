@@ -41,9 +41,9 @@ EOF
     if [ -d "/srv/websitepreview/$BUILDDIR" ]; then
       echo "Copying previous website preview into current directory"
       cp -r "/srv/websitepreview/$BUILDDIR" .
-    elif [ -d "$SITE_URL" ]; then
+    elif [ -d "/srv/site-builds/$SITE_URL" ]; then
       echo "Copying $SITE_URL to $BUILDDIR"
-      cp -r "$SITE_URL" "$BUILDDIR"
+      cp -r "/srv/site-builds/$SITE_URL" "$BUILDDIR"
     fi
     # Override the environment variables so that Jekyll builds
     # the site the way we want it built and where we want it built.

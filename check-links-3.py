@@ -216,6 +216,8 @@ async def async_check_link(session, url):
         return output_status('g', -8)
     except aiohttp.client_exceptions.ClientResponseError:
         return output_status('h', -9)
+    except asyncio.TimeoutError:
+        return output_status('i', -10)
 
 
 async def async_check_web(session, links):

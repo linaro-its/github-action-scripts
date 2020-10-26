@@ -368,7 +368,7 @@ def run_git_command(command):
 
 
 def get_repo():
-    repo_dir = os.getenv("bamboo_build_working_directory")
+    repo_dir = os.getenv("GITHUB_WORKSPACE")
     os.chdir(repo_dir)
     run_git_command("git checkout master")
     return Repo(repo_dir)

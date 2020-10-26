@@ -356,7 +356,7 @@ def run_git_command(command):
     # See https://stackoverflow.com/a/4565746/1233830
 
     # Fetch the SSH key from Vault and store it in a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as pem_file:
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
         pem = get_vault_secret("secret/misc/linaro-build-github.pem")
         pem_file.write(pem)
         pkf = pem_file.name

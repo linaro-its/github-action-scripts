@@ -10,6 +10,7 @@ bs4 = "*"
 aiohttp = "*"
 requests = "*"
 boto3 = "*"
+vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
 
 [requires]
 python_version = "3.8"

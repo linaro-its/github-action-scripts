@@ -368,14 +368,14 @@ def run_git_command(command):
 
 
 def get_repo():
-    repo_dir = os.getenv("GITHUB_WORKSPACE")
+    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     os.chdir(repo_dir)
     run_git_command("git checkout master")
     return Repo(repo_dir)
 
 
 def checkin_repo(repo):
-    repo_dir = os.getenv("GITHUB_WORKSPACE")
+    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     os.chdir(repo_dir)
     # Only use run_git_command when we need the SSH key involved.
     run_command("git add --all")
@@ -400,9 +400,9 @@ def check_repo_status(repo):
 def do_the_git_bits(data):
     repo = get_repo()
     working_dir = os.getenv("GITHUB_WORKSPACE")
-    sync_project_pages(data, "%s/_pages/projects" % working_dir)
+    sync_project_pages(data, "%s/website/_pages/projects" % working_dir)
     with open(
-            "%s/_data/projects.json" % working_dir,
+            "%s/website/_data/projects.json" % working_dir,
             "w"
             ) as json_file:
         json.dump(

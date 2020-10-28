@@ -91,7 +91,7 @@ function post_build_failed_preview(){
 
 function docker_build_site() {
   echo "Building the site ..."
-  echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE:/srv/source linaroits/jekyllsitebuild:latest build-site.sh"
+  echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE/website:/srv/source linaroits/jekyllsitebuild:latest"
   docker run --rm \
     -t \
     --cap-drop ALL \
@@ -99,11 +99,11 @@ function docker_build_site() {
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/group:/etc/group:ro \
     -u "$(id -u)":"$(id -g)" \
-    -v "$GITHUB_WORKSPACE":/srv/source \
+    -v "$GITHUB_WORKSPACE/website":/srv/source \
     linaroits/jekyllsitebuild:latest build-site.sh
 }
 
-cd "$GITHUB_WORKSPACE" || exit 1
+cd "$GITHUB_WORKSPACE/website" || exit 1
 setup_vars
 setup_testing
 make_dirs || exit 1

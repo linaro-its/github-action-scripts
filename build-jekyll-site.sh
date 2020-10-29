@@ -138,7 +138,7 @@ function post_build_failed_preview(){
 
 function docker_build_site() {
   echo "Building the site ..."
-  echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE/website:/srv/source linaroits/jekyllsitebuild:latest"
+  echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV ${DOCKER_MOUNTS[@]} -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE/website:/srv/source linaroits/jekyllsitebuild:latest"
   docker run --rm \
     -t \
     --cap-drop ALL \

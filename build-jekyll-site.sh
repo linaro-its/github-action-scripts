@@ -62,7 +62,11 @@ check_multi_repo() {
       if [ -d "$tag_val" ]; then
         # Construct a Docker mount command
         DOCKER_MOUNTS+=(-v $tag_val:/srv/$tag)
+      else
+        echo "$tag points to $tag_val but that doesn't seem to be a directory"
       fi
+    else
+      echo "$tag doesn't appear to have a value"
     fi
   done
 }

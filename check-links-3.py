@@ -1,16 +1,19 @@
 #!/usr/bin/python3
 #
 
-import sys
-import os
-from os.path import join
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
 import argparse
-import socket
-import aiohttp
 import asyncio
 import concurrent
+import io
+import os
+import socket
+import sys
+from os.path import join
+from urllib.parse import urlparse
+
+import aiohttp
+import requests
+from bs4 import BeautifulSoup
 
 # The link checking process depends on whether it is a relative
 # or absolute link. If it is a relative link, a file is looked for
@@ -324,7 +327,7 @@ def failures_to_dict(list_of_failures):
 
 
 # Scan the specified directory, ignoring anything that matches skip_list.
-def scan_directory(path, skip_list):
+def scan_directory(path, skip_list, create_gh_issue, assign_gh_issue):
     global failed_links
     global file_link_pairs
     global unique_links
@@ -344,7 +347,10 @@ def scan_directory(path, skip_list):
     else:
         soft_failure = scan_web_links()
     if failed_links != []:
-        output_failed_links()
+        if create_gh_issue is None:
+            output_failed_links()
+        else:
+            github_create_issue(create_gh_issue, assign_gh_issue)
     if soft_failure:
         print("\nLinks have been checked; warnings reported.")
     else:
@@ -386,6 +392,27 @@ def scan_web_links():
         failed_links += cul_result
     return soft_failure
 
+
+def github_create_issue(issue_url, assignees, token):
+    save_out = sys.stdout
+    fsock = io.StringIO()
+    sys.stdout = fsock
+    print("%s failed links have been found:\n" % len(failed_links))
+    report_failed_links(failed_links)
+    sys.stdout = save_out
+
+    headers = {
+        "accept": "application/vnd.github.v3+json",
+        "Authorization": "token %s" % token
+    }
+    result = requests.post(
+        title="%s failed links detected" % len(failed_links),
+        url=issue_url,
+        json=fsock.getvalue(),
+        headers=headers,
+        assignees=assignees)
+    if result.status_code == 201:
+        print("Failed links issue created at %s" % result.json()["html_url"])
 
 def output_failed_links():
     if output_file is not None:
@@ -434,13 +461,18 @@ if __name__ == '__main__':
                         help='specifies output file for error results')
     parser.add_argument('--no-external-errors', action='store_true',
                         help='ignores errors caused by external broken links')
+    parser.add_argument('--create-github-issue', action='store',
+                        help='creates issue on specified repo url')
+    parser.add_argument('--assign-github-issue', action='store',
+                        help='assigns the created issue to the array of names')
+    parser.add_argument('--github-access-token', action='store')
     args = parser.parse_args()
     html_cache_results = {}
     dns_skip = []
     verbose = 0
     output_file = None
 
-    print("Linaro Link Checker (2020-10-20)")
+    print("Linaro Link Checker (2020-10-29)")
 
     if args.verbose is not None:
         verbose = args.verbose
@@ -461,4 +493,9 @@ if __name__ == '__main__':
         print("Skipping external link checking")
     # For now, assume that we're just scanning the current directory. Add code
     # for file paths and possibly URLs at a future date ...
-    scan_directory("./", args.skip_path)
+    scan_directory(
+        "./",
+        args.skip_path,
+        args.create_github_issue,
+        args.assign_github_issue,
+        args.github_access_token)

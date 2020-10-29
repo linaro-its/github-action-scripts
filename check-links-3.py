@@ -327,7 +327,7 @@ def failures_to_dict(list_of_failures):
 
 
 # Scan the specified directory, ignoring anything that matches skip_list.
-def scan_directory(path, skip_list, create_gh_issue, assign_gh_issue):
+def scan_directory(path, skip_list, create_gh_issue, assign_gh_issue, gh_token):
     global failed_links
     global file_link_pairs
     global unique_links
@@ -350,7 +350,7 @@ def scan_directory(path, skip_list, create_gh_issue, assign_gh_issue):
         if create_gh_issue is None:
             output_failed_links()
         else:
-            github_create_issue(create_gh_issue, assign_gh_issue)
+            github_create_issue(create_gh_issue, assign_gh_issue, gh_token)
     if soft_failure:
         print("\nLinks have been checked; warnings reported.")
     else:

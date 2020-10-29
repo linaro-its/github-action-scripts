@@ -405,12 +405,15 @@ def github_create_issue(issue_url, assignees, token):
         "accept": "application/vnd.github.v3+json",
         "Authorization": "token %s" % token
     }
+    payload = {
+        "title": "%s failed links detected" % len(failed_links),
+        "body": fsock.getvalue(),
+        "assignees": json.loads(assignees)
+    }
     result = requests.post(
-        title="%s failed links detected" % len(failed_links),
         url=issue_url,
-        json=fsock.getvalue(),
-        headers=headers,
-        assignees=assignees)
+        json=payload,
+        headers=headers)
     if result.status_code == 201:
         print("Failed links issue created at %s" % result.json()["html_url"])
 

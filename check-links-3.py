@@ -398,8 +398,9 @@ def github_create_issue(issue_url, assignees, token):
     save_out = sys.stdout
     fsock = io.StringIO()
     sys.stdout = fsock
-    print("%s failed links have been found:\n" % len(failed_links))
+    print("%s failed links have been found:\n```\n" % len(failed_links))
     report_failed_links(failed_links)
+    print("```\n")
     sys.stdout = save_out
 
     headers = {

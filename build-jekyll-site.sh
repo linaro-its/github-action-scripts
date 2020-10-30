@@ -79,7 +79,7 @@ function setup_testing(){
     URL="http://$BUILDDIR.ghactions.linaro.org"
     cat > _config-testing.yml << EOF
 url: "$URL"
-destination: "$BUILDDIR"
+destination: "$SITE_URL"
 production: false
 future: true
 EOF
@@ -87,19 +87,18 @@ EOF
     # an existing version of the site.
     #
     # Start by making sure we don't have an existing build.
-    rm -rf "$BUILDDIR"
+    rm -rf "$SITE_URL"
     #
     if [ -d "/srv/websitepreview/$BUILDDIR" ]; then
-      echo "Copying previous website preview into current directory"
-      cp -r "/srv/websitepreview/$BUILDDIR" .
+      echo "Copying previous website preview"
+      cp -r "/srv/websitepreview/$BUILDDIR" "$SITE_URL"
     elif [ -d "/srv/site-builds/$SITE_URL" ]; then
-      echo "Copying $SITE_URL to $BUILDDIR"
-      cp -r "/srv/site-builds/$SITE_URL" "$BUILDDIR"
+      echo "Copying $SITE_URL"
+      cp -r "/srv/site-builds/$SITE_URL" .
     fi
-    # Override the environment variables so that Jekyll builds
-    # the site the way we want it built and where we want it built.
+    # Override the environment variable so that Jekyll builds
+    # the site the way we want it built.
     export JEKYLL_ENV="testing"
-    export SITE_URL="$BUILDDIR"
   fi
 }
 
@@ -122,9 +121,9 @@ function post_build_deploy_preview(){
     # Change group so that www-data can read the site for previews. We do this
     # rather than owner so that the owner (ubuntu) continues to have rw perms
     # which is important when cleaning up.
-    sudo chgrp -R www-data "$BUILDDIR"
+    sudo chgrp -R www-data "$SITE_URL"
     # Move the built directory into the preview space
-    mv "$BUILDDIR" /srv/websitepreview/
+    mv "$SITE_URL" /srv/websitepreview/"$BUILDDIR"
     # Send the status update to GitHub for the preview URL
     DATA="{\"state\": \"success\", \"target_url\": \"$URL\", \"context\": \"Deploy preview\", \"description\": \"Deployment complete\"}"
     curl -s -S -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL" >/dev/null
@@ -134,6 +133,8 @@ function post_build_deploy_preview(){
 function post_build_failed_preview(){
   if [ ! -z "$STATUSES_URL" ]; then
     echo "post_build_failed_preview"
+    # Remove the failed build directory
+    rm -r "$SITE_URL"
     # Send the status update to GitHub to say it failed
     DATA="{\"state\": \"failure\", \"context\": \"Deploy preview\", \"description\": \"Deployment failed\"}"
     curl -s -S -H "Content-Type: application/json" -H "Authorization: token $TOKEN" -d "$DATA" "$STATUSES_URL" >/dev/null

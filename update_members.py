@@ -81,8 +81,11 @@ def run_command(command):
 #         os.path.abspath(__file__)) + "/linaro-build-github.pem"
 
 
-def logo_directory(working_dir):
-    return "%s/logos" % working_dir
+def logo_directory():
+    return "%s/logos" % os.getenv("GITHUB_WORKSPACE")
+
+def repo_directory():
+    return "%s/website" % os.getenv("GITHUB_WORKSPACE")
 
 
 # def clone_repo(company):
@@ -144,9 +147,8 @@ def get_members(ldap_conn):
 
 
 def write_member_file(ldap_rec):
-    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     with open(
-        "%s/_company/%s.md" % (repo_dir, ldap_rec.ou.value),
+        "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value),
         "w"
     ) as fp:
         fp.write("---\n")
@@ -168,7 +170,7 @@ def save_member_logo(ldap_rec):
         print("No logo for %s" % ldap_rec.ou.value)
         return
     # Do we have a logos directory? If not, create it
-    logo_dir = logo_directory("%s/website" % os.getenv("GITHUB_WORKSPACE"))
+    logo_dir = logo_directory()
     if not os.path.isdir(logo_dir):
         os.mkdir(logo_dir)
     # Does the logo already exist? If it does, get the modification time
@@ -219,13 +221,14 @@ def remove_nonmatches(members, dir, extension):
     return removed
 
 
+# Only called when running on the Linaro repo.
 def remove_spurious_members(members):
     global invalidate_cache
     # Iterate through _company removing any markdown files that don't match
     # active members.
-    company_dir = "%s/website/_company" % os.getenv("GITHUB_WORKSPACE")
+    company_dir = "%s/_company" % repo_directory()
     remove_nonmatches(members, company_dir, "md")
-    logo_dir = logo_directory("%s/website" % os.getenv("GITHUB_WORKSPACE"))
+    logo_dir = logo_directory()
     result = remove_nonmatches(members, logo_dir, "jpg")
     if result:
         invalidate_cache = True
@@ -270,9 +273,8 @@ def write_members_json(company, members):
     # this script works through the structure of the members.json file in
     # the repo, removing all existing members and adding back the ones that
     # are listed as being in each group.
-    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     with open(
-            "%s/_data/members.json" % repo_dir
+            "%s/_data/members.json" % repo_directory()
             ) as json_file:
         data = json.load(json_file)
     for group in data:
@@ -283,7 +285,7 @@ def write_members_json(company, members):
     for m in members:
         process_groups(data, m, company)
     with open(
-            "%s/_data/members.json" % repo_dir,
+            "%s/_data/members.json" % repo_directory(),
             "w"
             ) as json_file:
         json.dump(
@@ -295,7 +297,7 @@ def write_members_json(company, members):
 
 
 def sync_member_logos():
-    logo_dir = logo_directory("%s/website" % os.getenv("GITHUB_WORKSPACE"))
+    logo_dir = logo_directory()
     os.chdir(logo_dir)
     run_command(
         'aws --profile update-member-logos s3 sync --cache-control'
@@ -367,8 +369,7 @@ def create_github_pull_request(company, repo):
 
 
 def checkin_repo(company, repo):
-    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
-    os.chdir(repo_dir)
+    os.chdir(repo_directory())
     run_command("git add --all")
     run_command("git commit -m %s" % repo.active_branch.name)
     # Only use run_git_command when we need the SSH key involved.
@@ -445,8 +446,7 @@ def clean_up_repo(company, repo):
     if got_error:
         untracked_files = repo.untracked_files
         # The files are relative to the repo directory so change there first
-        repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
-        os.chdir(repo_dir)
+        os.chdir(repo_directory())
         # and delete them
         for f in untracked_files:
             os.remove(f)
@@ -460,7 +460,7 @@ def clean_up_repo(company, repo):
 
 
 def process_repo(company):
-    repo = Repo("%s/website" % os.getenv("GITHUB_WORKSPACE"))
+    repo = Repo(repo_directory())
     create_branch(repo)
     update(company, repo)
     if not got_error:

@@ -196,10 +196,10 @@ def save_member_logo(ldap_rec):
 
 
 def update_member(company, ldap_rec):
-    print("Processing %s" % ldap_rec.displayName.value)
     if company == "Linaro":
+        print("Processing %s" % ldap_rec.displayName.value)
         write_member_file(ldap_rec)
-    save_member_logo(ldap_rec)
+        save_member_logo(ldap_rec)
 
 
 def is_member(members, filename, extension):
@@ -325,9 +325,8 @@ def update(company, repo):
     if not got_error:
         write_members_json(company, members)
     # write_members_json can set got_error hence the need to check it again
-    if not got_error:
-        if company == "Linaro":
-            remove_spurious_members(members)
+    if not got_error and company == "Linaro":
+        remove_spurious_members(members)
         sync_member_logos()
 
 

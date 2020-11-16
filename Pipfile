@@ -14,6 +14,7 @@ boto3 = "*"
 vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
 gitpython = "*"
 ldap3 = "*"
+metadata-parser = "*"
 
 [requires]
 python_version = "3.8"

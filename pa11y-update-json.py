@@ -35,6 +35,12 @@ def get_site_image_url(site):
     try:
         page = metadata_parser.MetadataParser(url="https://%s" % site, search_head_only=True)
         return page.get_metadata_link("image")
+    except SystemExit:
+        # clean-up
+        raise
+    except KeyboardInterrupt:
+        # clean-up
+        raise
     except:
         return ""
 
@@ -61,6 +67,12 @@ def read_site_json_file():
     try:
         with open('/srv/a11y.linaro.org/site-config.json', 'r') as fh:
             return json.load(fh)
+    except SystemExit:
+        # clean-up
+        raise
+    except KeyboardInterrupt:
+        # clean-up
+        raise
     except:
         return []
 

@@ -64,48 +64,11 @@ def run_command(command):
         print(result.stderr.decode("utf-8"))
 
 
-# def run_git_command(command):
-#     # We do some funky stuff around the git command processing because we want
-#     # to keep the SSH key under tight control.
-#     # See https://stackoverflow.com/a/4565746/1233830
-#     git_cmd = 'ssh-add "%s"; %s' % (pkf, command)
-#     full_cmd = "ssh-agent bash -c '%s'" % git_cmd
-#     run_command(full_cmd)
-
-
-# def init_pkf():
-#     global pkf
-
-#     # Work out where the GitHub key is located.
-#     pkf = os.path.dirname(
-#         os.path.abspath(__file__)) + "/linaro-build-github.pem"
-
-
 def logo_directory():
     return "%s/logos" % os.getenv("GITHUB_WORKSPACE")
 
 def repo_directory():
     return "%s/website" % os.getenv("GITHUB_WORKSPACE")
-
-
-# def clone_repo(company):
-#     # The environment variable bamboo_build_working_directory says where we
-#     # can put stuff ... :)
-#     working_dir = os.getenv("bamboo_build_working_directory")
-#     repo_dir = "%s/%s" % (working_dir, company)
-#     # If the repo is there already, go into it and pull, otherwise clone it.
-#     if os.path.isdir(repo_dir):
-#         print("Pulling website repository for %s" % company)
-#         os.chdir(repo_dir)
-#         run_git_command("git pull")
-#     else:
-#         print("Cloning website repository for %s" % company)
-#         os.chdir(working_dir)
-#         run_git_command("git clone git@github.com:%s/website.git %s" % (company, company))
-#     # Make sure the master branch is present
-#     os.chdir(repo_dir)
-#     run_git_command("git checkout master")
-#     return Repo(repo_dir)
 
 
 def create_branch(repo):

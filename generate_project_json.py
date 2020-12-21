@@ -1,32 +1,20 @@
-import json
 import os
 import shutil
-import subprocess
 import sys
-import tempfile
 
 import requests
-import vault_auth
-from git import Repo
 from ldap3 import SUBTREE, Connection
 from requests.auth import HTTPBasicAuth
+
+import json_generation_lib
 
 PI_SLUG = "Project Information"
 nesting_level = 0
 
 
-def get_vault_secret(user_id):
-    secret = vault_auth.get_secret(
-        user_id,
-        iam_role="vault_jira_project_updater",
-        url="https://login.linaro.org:8200"
-    )
-    return secret["data"]["pw"]
-
-
 def initialise_ldap():
     username = "cn=bamboo-bind,ou=binders,dc=linaro,dc=org"
-    password = get_vault_secret("secret/ldap/{}".format(username))
+    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
     return Connection(
             'ldaps://login.linaro.org',
             user=username,
@@ -37,7 +25,7 @@ def initialise_ldap():
 
 def initialise_auth():
     username = "it.support.bot"
-    password = get_vault_secret("secret/ldap/{}".format(username))
+    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
     return HTTPBasicAuth(username, password)
 
 
@@ -276,7 +264,6 @@ def htmlise_line(line):
     return result + htmlise_non_list_line(line)
 
 
-
 def htmlise_value(value):
     global nesting_level
     # The nesting level should already be zero because we
@@ -340,79 +327,6 @@ def construct_project_blob(p, metadata):
     blob[PI_SLUG]["description"] = htmlise_value(p["description"])
     return blob
 
-def run_command(command):
-    result = subprocess.run(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode != 0:
-        print("ERROR: '%s'" % command)
-        print(result.stdout.decode("utf-8"))
-        print(result.stderr.decode("utf-8"))
-        sys.exit(1)
-
-
-def run_git_command(command):
-    # We do some funky stuff around the git command processing because we want
-    # to keep the SSH key under tight control.
-    # See https://stackoverflow.com/a/4565746/1233830
-
-    # Fetch the SSH key from Vault and store it in a temporary file
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
-        pem = get_vault_secret("secret/misc/linaro-build-github.pem")
-        pem_file.write(pem)
-        pkf = pem_file.name
-
-    git_cmd = 'ssh-add "%s"; %s' % (pkf, command)
-    full_cmd = "ssh-agent bash -c '%s'" % git_cmd
-    run_command(full_cmd)
-    os.remove(pkf)
-
-
-def get_repo():
-    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
-    os.chdir(repo_dir)
-    run_git_command("git checkout master")
-    return Repo(repo_dir)
-
-
-def checkin_repo(repo):
-    repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
-    os.chdir(repo_dir)
-    # Only use run_git_command when we need the SSH key involved.
-    run_command("git add --all")
-    run_command("git commit -m \"Update project data\"")
-    run_git_command(
-        "git push --set-upstream origin %s" % repo.active_branch.name)
-
-
-def check_repo_status(repo):
-    # Add any untracked files to the repository
-    untracked_files = repo.untracked_files
-    for f in untracked_files:
-        repo.git.add(f)
-    # See if we have changed anything
-    if repo.is_dirty():
-        print("Checking in git repository changes")
-        checkin_repo(repo)
-    else:
-        print("No changes made to the git repository")
-
-
-def do_the_git_bits(data):
-    repo = get_repo()
-    working_dir = os.getenv("GITHUB_WORKSPACE")
-    sync_project_pages(data, "%s/website/_pages/projects" % working_dir)
-    with open(
-            "%s/website/_data/projects.json" % working_dir,
-            "w"
-            ) as json_file:
-        json.dump(
-            data,
-            json_file,
-            indent=4,
-            sort_keys=True
-        )
-    check_repo_status(repo)
-
 
 def check_project_dir_exists(key, projects_directory):
     path = "%s/%s" % (projects_directory, key.lower())
@@ -463,7 +377,9 @@ def main():
     # of the projects with metadata, re-fetch the Jira project info.
     jira_projects = get_specific_projects(jira_metadata, jira_auth)
     project_data = construct_project_data(jira_projects, jira_metadata)
-    do_the_git_bits(project_data)
+    working_dir = json_generation_lib.working_dir()
+    sync_project_pages(project_data, "%s/website/_pages/projects" % working_dir)
+    json_generation_lib.do_the_git_bits(project_data, "%s/website/_data/projects.json" % working_dir)
 
 
 if __name__ == '__main__':

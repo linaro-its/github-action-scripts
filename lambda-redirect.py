@@ -103,12 +103,12 @@ def function_needs_updating(rules_file):
 # See https://stackoverflow.com/a/48435482/305975
 def add_file_to_zip(ziphandle, source_file, zip_filename):
     f = open(source_file, "r")
-    bytes = f.read()
+    data = f.read()
     f.close()
     info = zipfile.ZipInfo(zip_filename)
     info.date_time = time.localtime()
     info.external_attr = 0o100644 << 16
-    ziphandle.writestr(info, bytes)
+    ziphandle.writestr(info, data)
 
 
 # The script is being run from the same directory that the

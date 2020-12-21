@@ -66,11 +66,11 @@ def initialise_auth():
     # Username (email) of user to run scripts as.
     username = "kyle.kirkby@linaro.org"
     # Get the Google Service Account JSON blob
-    googleServiceAccountJSON = json.loads(get_vault_secret("secret/misc/google-gitmaintainerssync.json"))
+    google_service_account_json = json.loads(get_vault_secret("secret/misc/google-gitmaintainerssync.json"))
     # Instantiate a new service account auth object
-    serviceAccountAuth = service_account.Credentials.from_service_account_info(
-            googleServiceAccountJSON, scopes=SCOPES)
-    delegated_creds = serviceAccountAuth.with_subject(username)
+    service_account_auth = service_account.Credentials.from_service_account_info(
+            google_service_account_json, scopes=SCOPES)
+    delegated_creds = service_account_auth.with_subject(username)
     return delegated_creds
 
 def run_command(command):
@@ -144,15 +144,15 @@ def main():
     # Initialize Google Auth
     delegated_creds = initialise_auth()
     # Create the JSON files with the returned credentials
-    jsonData = create_json_object(delegated_creds)
+    json_data = create_json_object(delegated_creds)
     # Check if files have been created successfully.
-    if not jsonData:
+    if not json_data:
         print("Failed to created the maintainers/projects JSON files")
         sys.exit(1)
     else:
         print("Maintainers data fetched. Checking in the changes.")
         # Check for changes
-        do_the_git_bits(jsonData)
+        do_the_git_bits(json_data)
 
 if __name__ == '__main__':
     main()

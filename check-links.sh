@@ -17,4 +17,4 @@ fi
 
 cd $DIR
 echo "check-links-3.py -d $BUILDDIR $@"
-pipenv run python check-links-3.py -d "$BUILDDIR" "$@"
+pipenv run python check_links_3.py -d "$BUILDDIR" "$@"

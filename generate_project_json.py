@@ -320,6 +320,11 @@ def htmlise_value(value):
     return result
 
 
+def string_to_list(value):
+    """ Convert a multi-line string into a list. """
+    return value.split("\n")
+
+
 def construct_project_data(projects, metadata):
     """ Convert the separate project data into a single Python object. """
     results = []
@@ -350,7 +355,10 @@ def construct_project_blob(proj, metadata):
             value = meta_value(meta, parts[1], parts[0])
             if parts[0] not in blob:
                 blob[parts[0]] = {}
-            blob[parts[0]][parts[1]] = htmlise_value(value)
+            if prop == "Project Information:Theme":
+                blob[parts[0]][parts[1]] = string_to_list(value)
+            else:
+                blob[parts[0]][parts[1]] = htmlise_value(value)
     # Finish off with the title and description from the project
     if PI_SLUG not in blob:
         blob[PI_SLUG] = {}

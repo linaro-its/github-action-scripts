@@ -135,7 +135,7 @@ def remove_site(config, site_name):
         return
     # Delete the site type from the config
     if found_site_type is not None:
-        del found_site_type
+        found_site_id["environments"].remove(found_site_type)
 
 
 def update_data(config, site_name, working_directory):

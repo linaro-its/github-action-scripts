@@ -89,8 +89,8 @@ def write_site_json_file(data):
         json.dump(new_list, handle)
 
 
-def update_data(config, site_name, working_directory):
-    """ Add/update this scanned site to the config. """
+def get_site_details(site_name):
+    """ Extract site type and ID from the name. """
     # Split the site name into the first part (staging/production) and
     # the rest.
     parts = site_name.split(".", 1)
@@ -104,7 +104,12 @@ def update_data(config, site_name, working_directory):
         site_type = "PR%s" % pr_num
         # and then figure out the correct site ID
         parts = pr_parts[0].replace("-", ".").split(".", 1)
-        site_id = parts[1]        
+        site_id = parts[1]
+    return site_id, site_type
+
+
+def find_site_in_config(config, site_id, site_type):
+    """ Try to find existing config for the site. """
     # Is the site already in the config?
     found_site_id = None
     found_site_type = None
@@ -116,6 +121,28 @@ def update_data(config, site_name, working_directory):
                     found_site_type = env
                     break
             break
+    return found_site_id, found_site_type
+
+
+def remove_site(config, site_name):
+    """
+    Remove the specified site from the dashboard. This *should*
+    only be used for the pull requests.
+    """
+    site_id, site_type = get_site_details(site_name)
+    found_site_id, found_site_type = find_site_in_config(config, site_id, site_type)
+    if found_site_id is None:
+        return
+    # Delete the site type from the config
+    if found_site_type is not None:
+        del found_site_id["environments"][site_type]
+
+
+def update_data(config, site_name, working_directory):
+    """ Add/update this scanned site to the config. """
+    site_id, site_type = get_site_details(site_name)
+    found_site_id, found_site_type = find_site_in_config(config, site_id, site_type)
+    # Add if not already there.
     if found_site_id is None:
         found_site_id = {
             "site_id": site_id,
@@ -140,17 +167,22 @@ def update_data(config, site_name, working_directory):
 def get_args():
     """ Get the script's commandline arguments. """
     parser = argparse.ArgumentParser()
-    parser.add_argument("site", action="store")
-    parser.add_argument("directory", action="store")
-    args = parser.parse_args()
-    return args.site, args.directory
+    parser.add_argument("--site", action="store", required=True)
+    parser.add_argument("--directory", action="store")
+    parser.add_argument("--remove", action="store_true")
+    return parser.parse_args()
 
 
 def main():
     """ Main code. """
-    site_name, working_directory = get_args()
+    args = get_args()
+    site_name = args.site
     data = read_site_json_file()
-    update_data(data, site_name, working_directory)
+    if args.remove:
+        remove_site(data, site_name)
+    else:
+        working_directory = args.directory
+        update_data(data, site_name, working_directory)
     write_site_json_file(data)
 
 

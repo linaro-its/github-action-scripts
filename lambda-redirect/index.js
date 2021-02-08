@@ -4,8 +4,12 @@ var rules = require('./rules.js');
 let rewriteRules;
 
 const applyRules = function(e) {
-  const req = e.Records[0].cf.request;    
-  const uri = req.uri;
+  const req = e.Records[0].cf.request;
+  // With S3 website hosting turned off, we have to add
+  // index.html to /-ending URIs.
+  const uri = req.uri.replace(/\/$/, '\/index.html');
+  // Write the potentially modified URI back to the request
+  e.Records[0].cf.request.uri = uri;
 
   console.log(`Processing ${uri}`);
 

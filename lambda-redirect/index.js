@@ -5,11 +5,22 @@ let rewriteRules;
 
 const applyRules = function(e) {
   const req = e.Records[0].cf.request;
-  // With S3 website hosting turned off, we have to add
-  // index.html to /-ending URIs.
-  const uri = req.uri.replace(/\/$/, '\/index.html');
+  var uri = req.uri;
+  console.log(`Original URI: ${uri}`);
+  // Linaro's link checker ensures that directories cannot
+  // have full-stops in them, so if the URI doesn't end
+  // with '/' *and* does not have a full-stop, it is an
+  // unterminated URL, so add "/index.html".
+  if (!uri.includes('.')) {
+    var last = uri.substr(uri.length -1);
+    if (last !== '/') {
+      uri = uri + "/index.html";
+    } else {
+      uri = uri + "index.html";
+    }
+  }
   // Write the potentially modified URI back to the request
-  e.Records[0].cf.request.uri = uri;
+  req.uri = uri;
 
   console.log(`Processing ${uri}`);
 

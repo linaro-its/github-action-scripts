@@ -322,8 +322,11 @@ def htmlise_value(value):
 
 def string_to_list(value):
     """ Convert a multi-line string into a list. """
-    return value.split("\n")
-
+    conversion = value.split("\n")
+    # Remove any blank entries
+    while "" in conversion:
+        conversion.remove("")
+    return conversion
 
 def construct_project_data(projects, metadata):
     """ Convert the separate project data into a single Python object. """

@@ -1,3 +1,4 @@
+""" Update Members on the Linaro Website from LDAP data """
 #!/usr/bin/python3
 #
 # This script is run by a GitHub Action to:
@@ -11,27 +12,27 @@
 # The script uses direct git commands for the pull/clone/commit actions and
 # GitPython for the operations that result in manipulating the repo.
 
-import sys
-import os
-import subprocess
-from datetime import datetime, timezone
-from git import Repo
-from ldap3 import Connection, SUBTREE
-import vault_auth
 import glob
 import json
-import requests
-import boto3
+import os
+import subprocess
+import sys
 import time
+from datetime import datetime, timezone
 
+import boto3
+import requests
+import vault_auth
+from git import Repo
+from ldap3 import SUBTREE, Connection
 
 IMAGE_URL = "https://static.linaro.org/common/member-logos"
-pkf = None
-got_error = False
-invalidate_cache = False
+GOT_ERROR = False
+INVALIDATE_CACHE = False
 
 
 def get_vault_secret(user_id):
+    """ Get a secret from Linaro Vault """
     secret = vault_auth.get_secret(
         user_id,
         iam_role="vault_update_members",
@@ -41,6 +42,7 @@ def get_vault_secret(user_id):
 
 
 def initialise_ldap():
+    """ Return a LDAP Connection """
     username = "cn=update-members,ou=binders,dc=linaro,dc=org"
     password = get_vault_secret("secret/ldap/{}".format(username))
     return Connection(
@@ -52,26 +54,30 @@ def initialise_ldap():
 
 
 def run_command(command):
-    global got_error
+    """ Run the command """
+    global GOT_ERROR # pylint: disable=global-statement
     print("Running command: %s" % command)
     result = subprocess.run(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     print("Command output:")
     print(result.stdout.decode("utf-8"))
     if result.returncode != 0:
-        got_error = True
+        GOT_ERROR = True
         print("Error output:")
         print(result.stderr.decode("utf-8"))
 
 
 def logo_directory():
+    """ Where are the logos on the Actions server? """
     return "%s/logos" % os.getenv("GITHUB_WORKSPACE")
 
 def repo_directory():
+    """ Where is the repo on the Actions server? """
     return "%s/website" % os.getenv("GITHUB_WORKSPACE")
 
 
 def create_branch(repo):
+    """ Create a new branch """
     # Name the branch after the date and time
     now = datetime.now()
     branch_name = "member-update-%s" % now.strftime("%y%m%d-%H%M")
@@ -83,7 +89,8 @@ def create_branch(repo):
 
 
 def get_members(ldap_conn):
-    global got_error
+    """ Get all Members from LDAP """
+    global GOT_ERROR # pylint: disable=global-statement
     results = []
     with ldap_conn:
         if ldap_conn.search(
@@ -105,29 +112,31 @@ def get_members(ldap_conn):
             results = ldap_conn.entries
         else:
             print("ERROR: LDAP search for OUs failed")
-            got_error = True
+            GOT_ERROR = True
     return results
 
 
 def write_member_file(ldap_rec):
+    """ Write out the Member's file for this LDAP record """
     with open(
         "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value),
         "w"
-    ) as fp:
-        fp.write("---\n")
-        fp.write("title: %s\n" % ldap_rec.displayName.value)
+    ) as handle:
+        handle.write("---\n")
+        handle.write("title: %s\n" % ldap_rec.displayName.value)
         if ldap_rec.description.value is not None:
-            fp.write("description: >\n    %s\n" % ldap_rec.description.value)
-        fp.write("company_image: %s/%s.jpg\n" % (IMAGE_URL, ldap_rec.ou.value))
-        fp.write("---\n")
+            handle.write("description: >\n    %s\n" % ldap_rec.description.value)
+        handle.write("company_image: %s/%s.jpg\n" % (IMAGE_URL, ldap_rec.ou.value))
+        handle.write("---\n")
         if ldap_rec.businessCategory.value is not None:
-            fp.write(
+            handle.write(
                 "%s\n" % ldap_rec.businessCategory.value.replace('\r', '')
             )
 
 
 def save_member_logo(ldap_rec):
-    global invalidate_cache
+    """ Save the Member's logo for this LDAP record """
+    global INVALIDATE_CACHE # pylint: disable=global-statement
     # Exit this quickly if we don't have a logo in the record!
     if ldap_rec.jpegPhoto.value is None:
         print("No logo for %s" % ldap_rec.ou.value)
@@ -153,12 +162,13 @@ def save_member_logo(ldap_rec):
             save_logo = True
     if save_logo:
         print("Saving logo")
-        with open(logo_file, "wb") as fp:
-            fp.write(ldap_rec.jpegPhoto.value)
-        invalidate_cache = True
+        with open(logo_file, "wb") as handle:
+            handle.write(ldap_rec.jpegPhoto.value)
+        INVALIDATE_CACHE = True
 
 
 def update_member(company, ldap_rec):
+    """ Update a Member, but not Linaro! """
     if company == "Linaro" and ldap_rec.displayName.value != "Linaro":
         print("Processing %s" % ldap_rec.displayName.value)
         write_member_file(ldap_rec)
@@ -166,16 +176,18 @@ def update_member(company, ldap_rec):
 
 
 def is_member(members, filename, extension):
-    for m in members:
-        m_file = "%s.%s" % (m.ou.value, extension)
-        if m_file == filename:
+    """ Does 'filename' belong to a Member? """
+    for memb in members:
+        m_file = "%s.%s" % (memb.ou.value, extension)
+        if m_file == filename and memb.displayName.value != "Linaro":
             return True
     return False
 
 
-def remove_nonmatches(members, dir, extension):
+def remove_nonmatches(members, directory, extension):
+    """ Remove any files not belonging to Members """
     removed = False
-    os.chdir(dir)
+    os.chdir(directory)
     for filepath in glob.iglob('*.%s' % extension):
         if not is_member(members, filepath, extension):
             print("Removing %s" % filepath)
@@ -186,7 +198,8 @@ def remove_nonmatches(members, dir, extension):
 
 # Only called when running on the Linaro repo.
 def remove_spurious_members(members):
-    global invalidate_cache
+    """ Remove files belonging to ex-Members """
+    global INVALIDATE_CACHE # pylint: disable=global-statement
     # Iterate through _company removing any markdown files that don't match
     # active members.
     company_dir = "%s/_company" % repo_directory()
@@ -194,44 +207,47 @@ def remove_spurious_members(members):
     logo_dir = logo_directory()
     result = remove_nonmatches(members, logo_dir, "jpg")
     if result:
-        invalidate_cache = True
+        INVALIDATE_CACHE = True
 
 
 def add_to_group(data, group_name, level_name, member, company):
-    global got_error
+    """ Add this company to the group block in the data """
+    global GOT_ERROR # pylint: disable=global-statement
     # Find the group specified
-    for d in data:
-        if d["id"] == group_name:
-            if level_name not in d:
-                d[level_name] = []
+    for entry in data:
+        if entry["id"] == group_name:
+            if level_name not in entry:
+                entry[level_name] = []
             block = {
                 "name": member.displayName.value,
                 "image": "%s/%s.jpg" % (IMAGE_URL, member.ou.value),
                 "url": "/membership/%s/" % (member.ou.value)
             }
-            d[level_name].append(block)
+            entry[level_name].append(block)
             return
     if company == "Linaro":
         # Use that to show we are managing the master site, in which case
         # not all membership options will be matched.
         print("ERROR: Failed to find %s in members.json when adding %s" % (
             group_name, member.ou.value))
-        got_error = True
+        GOT_ERROR = True
 
 
 def process_groups(data, member, company):
+    """ Iterate through the membership data for this Member """
     # We use .values instead of .value to ensure that we always get a list
     # back, even if there is only one value.
     groups = member.organizationalStatus.values
-    for g in groups:
-        if "|" in g:
-            parts = g.split('|')
+    for grp in groups:
+        if "|" in grp:
+            parts = grp.split('|')
             add_to_group(data, parts[0], parts[1], member, company)
         else:
-            add_to_group(data, g, "members", member, company)
+            add_to_group(data, grp, "members", member, company)
 
 
 def write_members_json(company, members):
+    """ Write the membership data file out """
     # To maintain maximum flexibility around how the group data is managed,
     # this script works through the structure of the members.json file in
     # the repo, removing all existing members and adding back the ones that
@@ -245,8 +261,8 @@ def write_members_json(company, members):
             del group["members"]
         if "advisory_board" in group:
             del group["advisory_board"]
-    for m in members:
-        process_groups(data, m, company)
+    for memb in members:
+        process_groups(data, memb, company)
     with open(
             "%s/_data/members.json" % repo_directory(),
             "w"
@@ -260,6 +276,7 @@ def write_members_json(company, members):
 
 
 def sync_member_logos():
+    """ Sync the logos from the Actions server to AWS S3 """
     logo_dir = logo_directory()
     os.chdir(logo_dir)
     run_command(
@@ -269,8 +286,9 @@ def sync_member_logos():
     )
 
 
-def update(company, repo):
-    global got_error
+def update(company):
+    """ Update all of the Members """
+    global GOT_ERROR # pylint: disable=global-statement
     # Fetch all of the Member data from LDAP. Iterate through the Members,
     # outputting the individual Member markdown files and saving the logos
     # to a spare directory ready for syncing to S3. Finally, output the
@@ -285,16 +303,17 @@ def update(company, repo):
     connection.unbind()
     for member in members:
         update_member(company, member)
-    if not got_error:
+    if not GOT_ERROR:
         write_members_json(company, members)
     # write_members_json can set got_error hence the need to check it again
-    if not got_error and company == "Linaro":
+    if not GOT_ERROR and company == "Linaro":
         remove_spurious_members(members)
         sync_member_logos()
 
 
 def create_github_pull_request(company, repo):
-    global got_error
+    """ Create a pull request """
+    global GOT_ERROR # pylint: disable=global-statement
     now = datetime.now()
     data = {
         "title": "Member update for %s" % now.strftime("%d-%m-%y"),
@@ -309,10 +328,10 @@ def create_github_pull_request(company, repo):
     if result.status_code != 201:
         print("ERROR: Failed to create pull request")
         print(result.text)
-        got_error = True
+        GOT_ERROR = True
     else:
-        json = result.json()
-        print("Pull request created: %s" % json["html_url"])
+        json_result = result.json()
+        print("Pull request created: %s" % json_result["html_url"])
         # Request that Kyle reviews this PR
         data = {
             "reviewers": [
@@ -322,15 +341,16 @@ def create_github_pull_request(company, repo):
         url = (
             "https://api.github.com/repos/%s/website/pulls/"
             "%s/requested_reviewers"
-        ) % (company, json["number"])
+        ) % (company, json_result["number"])
         result = requests.post(url, json=data, headers=headers)
         if result.status_code != 201:
             print("ERROR: Failed to add review to the pull request")
             print(result.text)
-            got_error = True
+            GOT_ERROR = True
 
 
 def checkin_repo(company, repo):
+    """ Commit the changes made """
     os.chdir(repo_directory())
     run_command("git add --all")
     run_command("git commit -m %s" % repo.active_branch.name)
@@ -341,9 +361,10 @@ def checkin_repo(company, repo):
 
 
 def check_logo_status():
-    global invalidate_cache
+    """ Invalidate the CloudFront cache if we've changed any logos """
+    global INVALIDATE_CACHE # pylint: disable=global-statement
 
-    if invalidate_cache:
+    if INVALIDATE_CACHE:
         objects = [
             "/common/member-logos/*"
         ]
@@ -390,10 +411,11 @@ def check_logo_status():
 
 
 def check_repo_status(company, repo):
+    """ Have we modified the repo? """
     # Add any untracked files to the repository
     untracked_files = repo.untracked_files
-    for f in untracked_files:
-        repo.git.add(f)
+    for file in untracked_files:
+        repo.git.add(file)
     # See if we have changed anything
     if repo.is_dirty():
         checkin_repo(company, repo)
@@ -401,17 +423,18 @@ def check_repo_status(company, repo):
         print("No changes made to the git repository")
 
 
-def clean_up_repo(company, repo):
-    global got_error
+def clean_up_repo(repo):
+    """ Clean up the local copy of the repo """
+    global GOT_ERROR # pylint: disable=global-statement
     # If we got an error, delete any untracked files that we might have
     # created and do a git reset to reset any tracked modifications.
-    if got_error:
+    if GOT_ERROR:
         untracked_files = repo.untracked_files
         # The files are relative to the repo directory so change there first
         os.chdir(repo_directory())
         # and delete them
-        for f in untracked_files:
-            os.remove(f)
+        for file in untracked_files:
+            os.remove(file)
         # Now reset the branch back to its original state. It doesn't need the
         # SSH key so no need for git_run_command.
         run_command("git reset --hard")
@@ -422,19 +445,20 @@ def clean_up_repo(company, repo):
 
 
 def process_repo(company):
+    """ Work on the repo for this company website """
     repo = Repo(repo_directory())
     create_branch(repo)
-    update(company, repo)
-    if not got_error:
+    update(company)
+    if not GOT_ERROR:
         check_logo_status()
         check_repo_status(company, repo)
-    clean_up_repo(company, repo)
+    clean_up_repo(repo)
 
 
 def main(company):
-    # init_pkf()
+    """ Process the specified company """
     process_repo(company)
-    if got_error:
+    if GOT_ERROR:
         sys.exit(1)
 
 

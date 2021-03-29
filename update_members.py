@@ -159,7 +159,7 @@ def save_member_logo(ldap_rec):
 
 
 def update_member(company, ldap_rec):
-    if company == "Linaro":
+    if company == "Linaro" and ldap_rec.displayName.value != "Linaro":
         print("Processing %s" % ldap_rec.displayName.value)
         write_member_file(ldap_rec)
         save_member_logo(ldap_rec)

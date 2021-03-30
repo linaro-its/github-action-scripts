@@ -11,7 +11,7 @@ import os
 import socket
 import sys
 from os.path import join
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 import aiohttp
 import requests
@@ -83,7 +83,7 @@ def process_html_dirs(dirs, root):
     through the directories because os.walk does that already for all of
     the files.
     """
-    global FAILED_DIRS
+    global FAILED_DIRS # pylint: disable=global-statement
     for directory in dirs:
         if "." in directory:
             path = join(root, directory)
@@ -130,6 +130,12 @@ def validate_file_link(filename, text):
     if VERBOSE >= 2:
         print(("Validating file: constituent parts are '%s' and '%s',"
                " combined path is '%s'") % (head, text, combined_path))
+    # Unquote the string in case there are spaces or other odd chars ...
+    unescaped_path = unquote(combined_path)
+    if unescaped_path != combined_path:
+        combined_path = unescaped_path
+        if VERBOSE >= 2:
+            print("Unescaped file: %s" % unescaped_path)
     # needs to be a file or directory ... but if it is a directory, that means
     # the path didn't end with a "/" (because we would have added index.html)
     # so we now flag that as a failure because Linaro's implementation of static
@@ -483,10 +489,11 @@ def output_failed_links():
         print("")
     if FAILED_DIRS != []:
         print(
-            "%s directories have been found with full-stops in name (invalid):\n" % len(FAILED_DIRS), file=output_to)
+            "%s directories found with full-stops in name (invalid):\n" % len(FAILED_DIRS),
+            file=output_to)
         report_failed_dirs(FAILED_DIRS, output_to)
     if FAILED_LINKS != []:
-        print("%s failed links have been found:\n" % len(FAILED_LINKS), file=output_to)
+        print("%s failed links found:\n" % len(FAILED_LINKS), file=output_to)
         report_failed_links(FAILED_LINKS, output_to)
     if OUTPUT_FILE is not None:
         output_to.close()
@@ -495,8 +502,8 @@ def output_failed_links():
 
 def report_failed_dirs(dir_list, output_to):
     """ Report any directories with full-stops in their names. """
-    for dir in dir_list:
-        print(dir, file=output_to)
+    for directory in dir_list:
+        print(directory, file=output_to)
 
 
 def report_failed_links(link_list, output_to):

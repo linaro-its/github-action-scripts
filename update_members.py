@@ -116,6 +116,13 @@ def get_members(ldap_conn):
     return results
 
 
+def delete_member_file(ldap_rec):
+    """ Delete Member pages per Ebba's request """
+    file = "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value)
+    if os.path.isfile(file):
+        os.remove(file)
+
+
 # def write_member_file(ldap_rec):
 #     """ Write out the Member's file for this LDAP record """
 #     with open(
@@ -172,6 +179,7 @@ def update_member(company, ldap_rec):
     if company == "Linaro" and ldap_rec.displayName.value != "Linaro":
         print("Processing %s" % ldap_rec.displayName.value)
         # write_member_file(ldap_rec)
+        delete_member_file(ldap_rec)
         save_member_logo(ldap_rec)
 
 

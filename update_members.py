@@ -228,8 +228,8 @@ def add_to_group(data, group_name, level_name, member, company):
                 entry[level_name] = []
             block = {
                 "name": member.displayName.value,
-                "image": "%s/%s.jpg" % (IMAGE_URL, member.ou.value),
-                "url": "/membership/%s/" % (member.ou.value)
+                "image": "%s/%s.jpg" % (IMAGE_URL, member.ou.value)
+                # "url": "/membership/%s/" % (member.ou.value)
             }
             entry[level_name].append(block)
             return

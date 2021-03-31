@@ -116,22 +116,22 @@ def get_members(ldap_conn):
     return results
 
 
-def write_member_file(ldap_rec):
-    """ Write out the Member's file for this LDAP record """
-    with open(
-        "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value),
-        "w"
-    ) as handle:
-        handle.write("---\n")
-        handle.write("title: %s\n" % ldap_rec.displayName.value)
-        if ldap_rec.description.value is not None:
-            handle.write("description: >\n    %s\n" % ldap_rec.description.value)
-        handle.write("company_image: %s/%s.jpg\n" % (IMAGE_URL, ldap_rec.ou.value))
-        handle.write("---\n")
-        if ldap_rec.businessCategory.value is not None:
-            handle.write(
-                "%s\n" % ldap_rec.businessCategory.value.replace('\r', '')
-            )
+# def write_member_file(ldap_rec):
+#     """ Write out the Member's file for this LDAP record """
+#     with open(
+#         "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value),
+#         "w"
+#     ) as handle:
+#         handle.write("---\n")
+#         handle.write("title: %s\n" % ldap_rec.displayName.value)
+#         if ldap_rec.description.value is not None:
+#             handle.write("description: >\n    %s\n" % ldap_rec.description.value)
+#         handle.write("company_image: %s/%s.jpg\n" % (IMAGE_URL, ldap_rec.ou.value))
+#         handle.write("---\n")
+#         if ldap_rec.businessCategory.value is not None:
+#             handle.write(
+#                 "%s\n" % ldap_rec.businessCategory.value.replace('\r', '')
+#             )
 
 
 def save_member_logo(ldap_rec):
@@ -171,7 +171,7 @@ def update_member(company, ldap_rec):
     """ Update a Member, but not Linaro! """
     if company == "Linaro" and ldap_rec.displayName.value != "Linaro":
         print("Processing %s" % ldap_rec.displayName.value)
-        write_member_file(ldap_rec)
+        # write_member_file(ldap_rec)
         save_member_logo(ldap_rec)
 
 

@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+debugpy = "*"
 
 [packages]
 bs4 = "*"

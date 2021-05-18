@@ -279,11 +279,11 @@ def htmlise_line(line):
 
     if line == "":
         return ""
-    elif line[0] == "*":
+    if line[0] == "*":
         # If the line is part of an unordered list, process the list
         # part first and then process the rest of the line.
         return htmlise_unordered_list(line)
-    elif NESTING_LEVEL != 0:
+    if NESTING_LEVEL != 0:
         # We've got a non-list line and the nesting level is
         # non-zero, so decrement the nesting level and close off
         # a list.

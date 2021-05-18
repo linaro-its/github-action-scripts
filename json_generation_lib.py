@@ -7,20 +7,22 @@ import tempfile
 import vault_auth
 from git import Repo
 
-secrets_cache = None
+SECRETS_CACHE = None
 
-def get_vault_secret(user_id):
-    global secrets_cache
-    if secrets_cache is None:
-        secrets_cache = {}
-    if user_id not in secrets_cache:
+def get_vault_secret(secret_path, key="pw"):
+    global SECRETS_CACHE # pylint: disable=global-statement
+    if SECRETS_CACHE is None:
+        SECRETS_CACHE = {}
+    if secret_path not in SECRETS_CACHE or key not in SECRETS_CACHE[secret_path]:
         secret = vault_auth.get_secret(
-            user_id,
+            secret_path,
             iam_role="vault_jira_project_updater",
             url="https://login.linaro.org:8200"
         )
-        secrets_cache[user_id] = secret["data"]["pw"]
-    return secrets_cache[user_id]
+        if secret_path not in SECRETS_CACHE:
+            SECRETS_CACHE[secret_path] = {}
+        SECRETS_CACHE[secret_path][key] = secret["data"][key]
+    return SECRETS_CACHE[secret_path][key]
 
 
 def run_command(command):

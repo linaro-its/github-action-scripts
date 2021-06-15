@@ -56,7 +56,7 @@ def build_lambda_arn(function_name):
     for version in versions:
         if version["Version"] != "$LATEST":
             ver = int(version["Version"])
-            if ver > highest_ver:
+            if highest_ver is None or ver > highest_ver:
                 highest_ver = ver
                 highest_arn = version["FunctionArn"]
     return highest_arn

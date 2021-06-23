@@ -106,6 +106,7 @@ def get_members(ldap_conn):
                     "displayName",
                     "jpegPhoto",
                     "organizationalStatus",
+                    "labeledURI",
                     "modifyTimestamp"
                 ]
                 ):
@@ -231,6 +232,8 @@ def add_to_group(data, group_name, level_name, member, company):
                 "image": "%s/%s.jpg" % (IMAGE_URL, member.ou.value)
                 # "url": "/membership/%s/" % (member.ou.value)
             }
+            if member.labeledURI.value is not None:
+                block["uri"] = member.labeledURI.value
             entry[level_name].append(block)
             return
     if company == "Linaro":

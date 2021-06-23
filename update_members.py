@@ -117,11 +117,11 @@ def get_members(ldap_conn):
     return results
 
 
-def delete_member_file(ldap_rec):
-    """ Delete Member pages per Ebba's request """
-    file = "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value)
-    if os.path.isfile(file):
-        os.remove(file)
+# def delete_member_file(ldap_rec):
+#     """ Delete Member pages per Ebba's request """
+#     file = "%s/_company/%s.md" % (repo_directory(), ldap_rec.ou.value)
+#     if os.path.isfile(file):
+#         os.remove(file)
 
 
 # def write_member_file(ldap_rec):
@@ -180,7 +180,7 @@ def update_member(company, ldap_rec):
     if company == "Linaro" and ldap_rec.displayName.value != "Linaro":
         print("Processing %s" % ldap_rec.displayName.value)
         # write_member_file(ldap_rec)
-        delete_member_file(ldap_rec)
+        # delete_member_file(ldap_rec)
         save_member_logo(ldap_rec)
 
 
@@ -211,8 +211,8 @@ def remove_spurious_members(members):
     global INVALIDATE_CACHE # pylint: disable=global-statement
     # Iterate through _company removing any markdown files that don't match
     # active members.
-    company_dir = "%s/_company" % repo_directory()
-    remove_nonmatches(members, company_dir, "md")
+    # company_dir = "%s/_company" % repo_directory()
+    # remove_nonmatches(members, company_dir, "md")
     logo_dir = logo_directory()
     result = remove_nonmatches(members, logo_dir, "jpg")
     if result:

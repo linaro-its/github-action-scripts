@@ -222,6 +222,7 @@ def remove_spurious_members(members):
 def add_to_group(data, group_name, level_name, member, company):
     """ Add this company to the group block in the data """
     global GOT_ERROR # pylint: disable=global-statement
+    print("Processing group %s" % group_name)
     # Find the group specified
     for entry in data:
         if entry["id"] == group_name:
@@ -234,6 +235,8 @@ def add_to_group(data, group_name, level_name, member, company):
             }
             if member.labeledURI.value is not None:
                 block["uri"] = member.labeledURI.value
+            else:
+                print("No outbound linking URL for %s" % member.displayName.value)
             entry[level_name].append(block)
             return
     if company == "Linaro":

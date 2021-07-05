@@ -1,101 +1,51 @@
+"""
+Update the membership levels and status Confluence pages.
+"""
 #!/usr/bin/python3
 
-import requests
-from requests.auth import HTTPBasicAuth
-from ldap3 import Connection, SUBTREE
-import re
 import json
-import vault_auth
 from io import StringIO
 
-server = "https://collaborate.linaro.org"
-auth = ""
-connection = None
+import requests
+import vault_auth
+from ldap3 import SUBTREE, Connection
+from requests.auth import HTTPBasicAuth
 
-member_status_page_part_1 = (
-    '<p class="auto-cursor-target"><br /></p>'
-    '<ac:structured-macro ac:name="run">'
-    '<ac:parameter ac:name="replace">s1:choice:?Member:select:'
-)
-member_status_page_part_2 = (
-    '</ac:parameter>'
-    '<ac:parameter ac:name="atlassian-macro-output-type">INLINE</ac:parameter>'
-    '<ac:rich-text-body>'
-    '<p class="auto-cursor-target"><br /></p>'
-    '<ac:structured-macro ac:name="jython">'
-    '<ac:parameter ac:name="output">wiki</ac:parameter>'
-    '<ac:parameter ac:name="var1">$s1</ac:parameter>'
-    '<ac:parameter ac:name="script">'
-    '#confluence-member-breakdowns/display_member_status.jython'
-    '</ac:parameter><ac:parameter ac:name="atlassian-macro-output-type">'
-    'INLINE</ac:parameter></ac:structured-macro>'
-    '<p class="auto-cursor-target"><br /></p>'
-    '</ac:rich-text-body></ac:structured-macro>'
-    '<p><br /></p>'
-)
+SERVER = "https://linaro.atlassian.net/wiki"
+AUTH = ""
+CONNECTION = None
 
-membership_levels_page_part_1 = (
-    '<p class="auto-cursor-target"><br /></p>'
-    '<ac:structured-macro ac:name="run">'
-    '<ac:parameter ac:name="replace">s1:choice:?Membership:select:'
-)
-membership_levels_page_part_2 = (
-    '</ac:parameter>'
-    '<ac:parameter ac:name="atlassian-macro-output-type">INLINE</ac:parameter>'
-    '<ac:rich-text-body>'
-    '<p class="auto-cursor-target"><br /></p>'
-    '<ac:structured-macro ac:name="jython">'
-    '<ac:parameter ac:name="output">wiki</ac:parameter>'
-    '<ac:parameter ac:name="var1">$s1</ac:parameter>'
-    '<ac:parameter ac:name="script">'
-    '#confluence-member-breakdowns/display_status_members.jython'
-    '</ac:parameter><ac:parameter ac:name="atlassian-macro-output-type">'
-    'INLINE</ac:parameter></ac:structured-macro>'
-    '<p class="auto-cursor-target"><br /></p>'
-    '</ac:rich-text-body></ac:structured-macro>'
-    '<p><br /></p>'
-)
-
-
-def clean_up_page_content(content):
-    # Remove ac:schema-version="?"
-    inter1 = re.sub(r' ac:schema-version="\d"', '', content)
-    # Remove ac:macro-id="?-?-?-?-?"
-    return re.sub(
-        r' ac:macro-id="[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+"',
-        '',
-        inter1)
-
-
-def assert_equal_long_string(a, b):
-    NOT, POINT = '-', '*'
-    if a != b:
-        print(a)
-        o = ''
-        for i, e in enumerate(a):
+def assert_equal_long_string(string1, string2):
+    """ Show where two strings differ """
+    dash, asterisk = '-', '*'
+    if string1 != string2:
+        print(string1)
+        diffs = ''
+        for i, element in enumerate(string1):
             try:
-                if e != b[i]:
-                    o += POINT
+                if element != string2[i]:
+                    diffs += asterisk
                 else:
-                    o += NOT
+                    diffs += dash
             except IndexError:
-                o += '*'
+                diffs += '*'
 
-        o += NOT * (len(a)-len(o))
-        if len(b) > len(a):
-            o += POINT * (len(b)-len(a))
+        diffs += dash * (len(string1)-len(diffs))
+        if len(string2) > len(string1):
+            diffs += asterisk * (len(string2)-len(string1))
 
-        print(o)
-        print(b)
+        print(diffs)
+        print(string2)
 
 
 def save_page(key, body):
+    """ Save the page to Confluence if it has been updated """
     result = requests.get(
-        "%s/rest/api/content/%s?expand=body.storage,version" % (server, key),
-        auth=auth)
+        "%s/rest/api/content/%s?expand=body.storage,version" % (SERVER, key),
+        auth=AUTH)
     if result.status_code == 200:
         j = result.json()
-        current_content = clean_up_page_content(j["body"]["storage"]["value"])
+        current_content = j["body"]["storage"]["value"]
         if body != current_content:
             # assertEqualLongString(current_content, body)
             current_version = j["version"]["number"]
@@ -116,8 +66,8 @@ def save_page(key, body):
             }
             headers = {'content-type': 'application/json'}
             post_result = requests.put(
-                "%s/rest/api/content/%s" % (server, key),
-                auth=auth,
+                "%s/rest/api/content/%s" % (SERVER, key),
+                auth=AUTH,
                 data=json.dumps(data),
                 headers=headers)
             if post_result.status_code == 200:
@@ -130,20 +80,22 @@ def save_page(key, body):
         print("%s: Couldn't retrieve content" % key)
 
 
-def get_vault_secret(user_id):
+def get_vault_secret(user_id, key="pw"):
+    """ Get a secret back from Vault """
     secret = vault_auth.get_secret(
         user_id,
         iam_role="vault_confluence_ldap_automation",
         url="https://login.linaro.org:8200"
     )
-    return secret["data"]["pw"]
+    return secret["data"][key]
 
 
 def initialise_ldap():
-    global connection
+    """ Initialise a LDAP connection """
+    global CONNECTION # pylint: disable=global-statement
     username = "cn=moinmoin,ou=binders,dc=linaro,dc=org"
     password = get_vault_secret("secret/ldap/{}".format(username))
-    connection = Connection(
+    CONNECTION = Connection(
             'ldaps://login.linaro.org',
             user=username,
             password=password,
@@ -152,59 +104,75 @@ def initialise_ldap():
 
 
 def initialise_confluence():
-    global auth
-    username = "it.support.bot"
-    password = get_vault_secret("secret/ldap/{}".format(username))
-    auth = HTTPBasicAuth(username, password)
+    """ Initialise the Confluence authentication """
+    global AUTH # pylint: disable=global-statement
+    username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot", "id")
+    password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot")
+    AUTH = HTTPBasicAuth(username, password)
 
 
 def find_members():
-    # Returns a list of Member names from LDAP where a Member is defined
-    # as someone having at least one Organizational Status value.
+    """
+    Returns a list of Member names from LDAP where a Member is defined
+    as someone having at least one Organizational Status value.
+    """
     members = {}
-    with connection:
-        if connection.search(
+    with CONNECTION:
+        if CONNECTION.search(
                 "ou=accounts,dc=linaro,dc=org",
                 search_filter="(objectClass=organizationalUnit)",
                 search_scope=SUBTREE,
                 attributes=[
-                    "ou",
                     "organizationalStatus",
                     "displayName"
                     ]
                 ):
-            for entry in connection.entries:
+            for entry in CONNECTION.entries:
                 if ("organizationalStatus" in entry and
                         "displayName" in entry and
                         entry["organizationalStatus"].values != []):
                     name = entry["displayName"].value
-                    ou = entry["ou"].value
-                    if ou not in members:
-                        members[ou] = name
+                    members[name] = list_to_comma_string(entry["organizationalStatus"].values)
     return members
 
 
+def list_to_comma_string(this_list):
+    """ Return a comma separated string from the list provided """
+    result = ""
+    for list_entry in this_list:
+        if result != "":
+            result += ", "
+        result += list_entry
+    return result
+
+
 def find_levels():
-    # Returns a list of the different membership levels declared for
-    # the Members.
-    levels = []
-    with connection:
-        if connection.search(
+    """
+    Returns a list of the different membership levels declared for
+    the Members.
+    """
+    levels = {}
+    with CONNECTION:
+        if CONNECTION.search(
                 "ou=accounts,dc=linaro,dc=org",
                 search_filter="(objectClass=organizationalUnit)",
                 search_scope=SUBTREE,
-                attributes=["organizationalStatus"]
+                attributes=["organizationalStatus", "displayName"]
                 ):
-            for entry in connection.entries:
+            for entry in CONNECTION.entries:
                 for level in entry["organizationalStatus"].values:
                     if level not in levels:
-                        levels.append(level)
-            # Sort the list
-            levels.sort()
+                        levels[level] = []
+                    levels[level].append(entry["displayName"].value)
+    # Turn the list of members per level into a comma-separated string
+    for level in levels:
+        members = sorted(levels[level])
+        levels[level] = list_to_comma_string(members)
     return levels
 
 
 def main():
+    """ Main! """
     # Get the credentials from the vault
     initialise_ldap()
     initialise_confluence()
@@ -214,28 +182,40 @@ def main():
     # Get a list of all of the Members from LDAP
     members = find_members()
     new_page = StringIO()
-    new_page.write(member_status_page_part_1)
+    new_page.write(
+        "<p>The information on this page is taken from the LDAP system managed "
+        "by IT Services. If you see any mistakes regarding the membership status for "
+        "a given Member, please contact IT Services with the correct information. "
+        "Thank you.</p>"
+        "<ul>"
+    )
     # Need to generate a list of tuples that are the dictionary
-    # sorted by value (i.e. the display name)
+    # sorted by key (i.e. the display name)
     sorted_by_value = sorted(
         members.items(),
-        key=lambda kv: kv[1]
+        key=lambda kv: kv[0]
     )
-    for v in sorted_by_value:
-        new_page.write(":%s:%s" % (v[0], v[1]))
-    new_page.write(member_status_page_part_2)
-    save_page("105414715", new_page.getvalue())
+    for value in sorted_by_value:
+        new_page.write("<li><p><strong>%s</strong> - %s</p></li>" % (value[0], value[1]))
+    new_page.write("</ul>")
+    save_page("14358150936", new_page.getvalue())
 
     # Rebuild membership levels page
     #
     # Get a list of all of the levels from LDAP
     levels = find_levels()
     new_page = StringIO()
-    new_page.write(membership_levels_page_part_1)
+    new_page.write(
+        "<p>The information on this page is taken from the LDAP system managed "
+        "by IT Services. If you see any mistakes regarding the membership status for "
+        "a given Member, please contact IT Services with the correct information. "
+        "Thank you.</p>"
+        "<ul>"
+    )
     for level in levels:
-        new_page.write(":%s:%s" % (level, level))
-    new_page.write(membership_levels_page_part_2)
-    save_page("105414727", new_page.getvalue())
+        new_page.write("<li><p><strong>%s</strong> - %s</p></li>" % (level, levels[level]))
+    new_page.write("</ul>")
+    save_page("14358150948", new_page.getvalue())
 
 
 if __name__ == '__main__':

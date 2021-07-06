@@ -5,35 +5,22 @@ import copy
 import sys
 
 import requests
+from requests.auth import HTTPBasicAuth
 
 import json_generation_lib
 
 NESTING_LEVEL = 0
 
-# PROJECT_CONTACT_INFORMATION = "Project Contact Information"
 PROJECT_INFORMATION = "Project Information"
-# PROJECT_OWNERSHIP = "Project Ownership"
 
 PROJECT_TEMPLATE = {
-    # PROJECT_CONTACT_INFORMATION: {
-    #     "Meetings": "",
-    #     "Point of Contact": ""
-    # },
     PROJECT_INFORMATION: {
-        # "Health Check Report": "",
-        # "JIRA Structure": "",
-        # "Plan of Record": "",
         "Project Homepage": None,
         "Theme": [],
         "Project tag line": None,
         "description": None,
         "title": None
     },
-    # PROJECT_OWNERSHIP: {
-    #     "Governing Entity": "",
-    #     "Project Owner": "",
-    #     "Technical Lead": ""
-    # },
     "icon": None,
     "key": None
 }
@@ -362,7 +349,7 @@ def process_field(project_dict, parent_level, field_level, field_value):
     else:
         dict_level[field_level] = htmlise_value(field_value)
 
-def construct_blob(project, md_fields):
+def construct_blob(project, md_fields, icon):
     """ Create a project blob for this project """
     # DEEPCOPY the project template otherwise Python updates the "master" version
     # Using dict() or copy() only does a shallow copy.
@@ -373,7 +360,7 @@ def construct_blob(project, md_fields):
     description = project["fields"]["description"]
     if description is not None:
         process_field(result, PROJECT_INFORMATION, "description", description)
-    # result["icon"] = project["avatarUrls"]["48x48"]
+    result["icon"] = icon
     for field in FIELD_LOCATIONS:
         where = FIELD_LOCATIONS[field]
         field_value = meta_field(project, field, md_fields)
@@ -385,6 +372,36 @@ def construct_blob(project, md_fields):
             process_field(result, where, field_name, field_value)
     return result
 
+def get_jira_icon(project, md_fields, jira_auth):
+    """ Figure out the URL for the project's icon """
+    # Try Cloud first ...
+    key = meta_field(project, "Project Key", md_fields)
+    headers = {
+        'Authorization': 'Basic %s' % jira_auth,
+        'content-type': 'application/json'
+    }
+    response = requests.get(
+        "https://linaro.atlassian.net/rest/api/2/project/%s" % key,
+        headers=headers
+    )
+    if response.status_code == 200:
+        data = response.json()
+        return data["avatarUrls"]["48x48"]
+    # Now try Server
+    username = "it.support.bot"
+    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
+    auth = HTTPBasicAuth(username, password)
+    headers = {'content-type': 'application/json'}
+    response = requests.get(
+            "https://projects.linaro.org/rest/api/2/project/%s" % key,
+            headers=headers,
+            auth=auth
+    )
+    if response.status_code == 200:
+        data = response.json()
+        return data["avatarUrls"]["48x48"]
+    return None
+
 def main():
     """ Main code. """
     jira_auth = initialise_auth()
@@ -392,7 +409,8 @@ def main():
     jira_projects = get_meta_projects(jira_auth)
     for project in jira_projects:
         if ok_to_proceed(project, md_fields):
-            print(construct_blob(project, md_fields))
+            icon = get_jira_icon(project, md_fields, jira_auth)
+            print(construct_blob(project, md_fields, icon))
 
 if __name__ == '__main__':
     main()

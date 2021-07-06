@@ -1,6 +1,7 @@
 """ Generate the JSON file used to drive the Projects data. """
 
 import base64
+import copy
 import sys
 
 import requests
@@ -9,46 +10,46 @@ import json_generation_lib
 
 NESTING_LEVEL = 0
 
-PROJECT_CONTACT_INFORMATION = "Project Contact Information"
+# PROJECT_CONTACT_INFORMATION = "Project Contact Information"
 PROJECT_INFORMATION = "Project Information"
-PROJECT_OWNERSHIP = "Project Ownership"
+# PROJECT_OWNERSHIP = "Project Ownership"
 
 PROJECT_TEMPLATE = {
-    PROJECT_CONTACT_INFORMATION: {
-        "Meetings": "",
-        "Point of Contact": ""
-    },
+    # PROJECT_CONTACT_INFORMATION: {
+    #     "Meetings": "",
+    #     "Point of Contact": ""
+    # },
     PROJECT_INFORMATION: {
-        "Health Check Report": "",
-        "JIRA Structure": "",
-        "Plan of Record": "",
-        "Project Homepage": "",
+        # "Health Check Report": "",
+        # "JIRA Structure": "",
+        # "Plan of Record": "",
+        "Project Homepage": None,
         "Theme": [],
-        "description": "",
-        "title": ""
+        "Project tag line": None,
+        "description": None,
+        "title": None
     },
-    PROJECT_OWNERSHIP: {
-        "Governing Entity": "",
-        "Project Owner": "",
-        "Technical Lead": ""
-    },
-    "icon": "",
-    "key": ""
+    # PROJECT_OWNERSHIP: {
+    #     "Governing Entity": "",
+    #     "Project Owner": "",
+    #     "Technical Lead": ""
+    # },
+    "icon": None,
+    "key": None
 }
 
-FIELD_MAPPINGS = {
-    "Open": None,
-    "Published": None,
-    "Meetings": PROJECT_CONTACT_INFORMATION,
-    "Point of Contact": PROJECT_CONTACT_INFORMATION,
-    "Health Check Report": PROJECT_INFORMATION,
-    "JIRA Structure": PROJECT_INFORMATION,
-    "Plan of Record": PROJECT_INFORMATION,
+# What do the various MD fields map onto name-wise
+FIELD_NAMES = {
+    "Home Page": "Project Homepage",
+    "Project Key": "key"
+}
+
+# Where do the various MD fields map?
+FIELD_LOCATIONS = {
+    "Project Key": None,
     "Theme": PROJECT_INFORMATION,
-    "Governing Entity": PROJECT_OWNERSHIP,
-    "Project Owner": PROJECT_OWNERSHIP,
-    "Technical Lead": PROJECT_OWNERSHIP,
-    "Project Key": None
+    "Home Page": PROJECT_INFORMATION,
+    "Project tag line": PROJECT_INFORMATION
 }
 
 def initialise_auth():
@@ -93,10 +94,10 @@ def get_metadata_fields(jira_auth):
                 print("WARNING! Multiple occurrences of '%s'" % name)
             cf_dict[name] = field["id"]
             md_name = name[3:]
-            if md_name not in FIELD_MAPPINGS:
+            if md_name not in FIELD_LOCATIONS:
                 print("WARNING! Cannot find %s in field mappings construct" % name)
     # Make sure that all of the field mappings have custom fields ...
-    for key in FIELD_MAPPINGS:
+    for key in FIELD_LOCATIONS:
         if "MD-%s" % key not in cf_dict:
             print("WARNING! Cannot find %s in field mappings" % key)
     return cf_dict
@@ -116,7 +117,7 @@ def meta_field(project, key, md_fields):
         print("Cannot find '%s' in metadata custom fields" % key)
         return None
     cf_id = md_fields[md_key]
-    print("%s maps to %s" % (md_key, cf_id))
+    # print("%s maps to %s" % (md_key, cf_id))
     if cf_id not in project["fields"]:
         print("No value for '%s' in project's metadata issue" % key)
         return None
@@ -147,6 +148,9 @@ def ok_to_proceed(project, md_fields):
     if meta_field(project, "Project Key", md_fields) is None:
         print("%s is missing project key - skipping" % project["key"])
         return False
+    print("Proceeding with %s" % project["key"])
+    # if project["key"] == "META-12":
+    #     print(json.dumps(project))
     return True
 
 def htmlise_email(name, addr):
@@ -345,23 +349,40 @@ def htmlise_value(value):
 
 def process_field(project_dict, parent_level, field_level, field_value):
     """ Convert the value into something usable for HTML """
+    if parent_level is None:
+        dict_level = project_dict
+    else:
+        dict_level = project_dict[parent_level]
     if isinstance(field_value, dict):
         # We are assuming this is a user blob
-        project_dict[parent_level][field_level] = htmlise_email(
+        dict_level[field_level] = htmlise_email(
             field_value["displayName"], field_value["emailAddress"])
     elif isinstance(field_value, list):
-        project_dict[parent_level][field_level] = field_value
+        dict_level[field_level] = field_value
     else:
-        project_dict[parent_level][field_level] = htmlise_value(field_value)
+        dict_level[field_level] = htmlise_value(field_value)
 
 def construct_blob(project, md_fields):
     """ Create a project blob for this project """
-    result = PROJECT_TEMPLATE
-    for field in FIELD_MAPPINGS:
-        where = FIELD_MAPPINGS[field]
+    # DEEPCOPY the project template otherwise Python updates the "master" version
+    # Using dict() or copy() only does a shallow copy.
+    result = copy.deepcopy(PROJECT_TEMPLATE)
+    summary = project["fields"]["summary"]
+    if summary is not None:
+        process_field(result, PROJECT_INFORMATION, "title", summary)
+    description = project["fields"]["description"]
+    if description is not None:
+        process_field(result, PROJECT_INFORMATION, "description", description)
+    # result["icon"] = project["avatarUrls"]["48x48"]
+    for field in FIELD_LOCATIONS:
+        where = FIELD_LOCATIONS[field]
         field_value = meta_field(project, field, md_fields)
-        if where is not None and field_value is not None:
-            process_field(result, where, field, field_value)
+        if field in FIELD_NAMES:
+            field_name = FIELD_NAMES[field]
+        else:
+            field_name = field
+        if field_value is not None:
+            process_field(result, where, field_name, field_value)
     return result
 
 def main():

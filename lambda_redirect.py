@@ -1,15 +1,16 @@
+""" Set up the Lambda handler for URL redirects """
 #!/usr/bin/python3
 
 
-import sys
-import os
 import argparse
-import zipfile
-import boto3
-from tempfile import mkstemp
-import requests
+import os
+import sys
 import time
+import zipfile
+from tempfile import mkstemp
 
+import boto3
+import requests
 
 _PROFILE = (
     "AWS_STATIC_SITE_PROFILE"
@@ -29,14 +30,16 @@ _NODE_RUNTIME = (
 
 
 def get_env_var(env):
-    foo = os.environ.get(env)
-    if foo is None:
+    """ Get the required environment variable's value """
+    env_value = os.environ.get(env)
+    if env_value is None:
         print("Cannot retrieve environment variable '%s'" % env)
         sys.exit(1)
-    return foo
+    return env_value
 
 
 def lambda_list_functions():
+    """ Return a list of the Lambda functions in us-east-1 """
     profile = get_env_var(_PROFILE)
     session = boto3.Session(profile_name=profile)
     client = session.client('lambda', 'us-east-1')
@@ -44,20 +47,23 @@ def lambda_list_functions():
 
 
 def lambda_func_exists():
+    """ Does the redirect function exist in Lambda? """
     funcs = lambda_list_functions()
     required_name = lambda_func_from_var()
-    for f in funcs:
-        if f["FunctionName"] == required_name:
+    for func in funcs:
+        if func["FunctionName"] == required_name:
             return True
     return False
 
 
 def lambda_func_from_var():
+    """ Build and return the Lambda function name """
     url = get_env_var(_SITE_URL)
     return url + "-redirect"
 
 
 def function_needs_updating(rules_file):
+    """ Does the Lambda function need updating? """
     # Start by reading the proposed rules file because
     # if we can't read it, it is a build failure
     if os.path.isfile(rules_file):
@@ -79,11 +85,11 @@ def function_needs_updating(rules_file):
     if response["Configuration"]["Runtime"] != _NODE_RUNTIME:
         return True
     # Download the zip file
-    r = requests.get(response["Code"]["Location"])
+    result = requests.get(response["Code"]["Location"])
     handle, zip_file = mkstemp(".zip")
     os.close(handle)
     with open(zip_file, 'wb') as file:
-        file.write(r.content)
+        file.write(result.content)
     # Now read the rules file from it
     with zipfile.ZipFile(zip_file) as myzip:
         with myzip.open('rules.json') as file:
@@ -102,9 +108,9 @@ def function_needs_updating(rules_file):
 # we add the file to the zip file.
 # See https://stackoverflow.com/a/48435482/305975
 def add_file_to_zip(ziphandle, source_file, zip_filename):
-    f = open(source_file, "r")
-    data = f.read()
-    f.close()
+    """ Add the specified file to the zip file """
+    with open(source_file, "r") as handle:
+        data = handle.read()
     info = zipfile.ZipInfo(zip_filename)
     info.date_time = time.localtime()
     info.external_attr = 0o100644 << 16
@@ -114,6 +120,7 @@ def add_file_to_zip(ziphandle, source_file, zip_filename):
 # The script is being run from the same directory that the
 # supporting files are in.
 def rebuild_zip_file(rules_file):
+    """ Rebuild the Lambda zip file """
     handle, zip_file = mkstemp(".zip")
     os.close(handle)
     with zipfile.ZipFile(zip_file, 'w') as myzip:
@@ -130,12 +137,14 @@ def rebuild_zip_file(rules_file):
 
 
 def aws_account_id():
+    """ Get the account ID for the specified profile """
     session = boto3.Session(profile_name=get_env_var(_PROFILE))
     client = session.client("sts")
     return client.get_caller_identity()["Account"]
 
 
 def publish_zip_file(zip_file):
+    """ Publish the zip file as a Lambda function """
     with open(zip_file, 'rb') as content_file:
         content = content_file.read()
     session = boto3.Session(profile_name=get_env_var(_PROFILE))
@@ -159,23 +168,22 @@ def publish_zip_file(zip_file):
     add_cloudfront_trigger(session, func_arn)
 
 def add_cloudfront_trigger(session, func_arn):
+    """ Point the CF origin request trigger at the function """
     cf_client = session.client('cloudfront', 'us-east-1')
     config = cf_client.get_distribution_config(
         Id=get_env_var(_CFDIST)
     )
-    dc = config["DistributionConfig"]
-    dcb = dc["DefaultCacheBehavior"]
+    distrib_config = config["DistributionConfig"]
+    dcb = distrib_config["DefaultCacheBehavior"]
     #
     # The distribution can have more than one LFA now so we need to
     # be careful about how we update the distribution.
-    #
-    # Get the function ARN without the version number in it.
-    no_ver = func_arn.rsplit(":", 1)[0]
     item_block = {
         "EventType": "origin-request",
         "LambdaFunctionARN": func_arn
     }
     if "LambdaFunctionAssociations" not in dcb:
+        # No LFAs at all
         dcb["LambdaFunctionAssociations"] = {
             "Items": [
                 item_block
@@ -186,13 +194,17 @@ def add_cloudfront_trigger(session, func_arn):
     else:
         found = False
         if "Items" not in dcb["LambdaFunctionAssociations"]:
+            # LFAs but no items
             dcb["LambdaFunctionAssociations"]["Items"] = []
         else:
+            # We have LFAs so try to find the origin-request
             for lfa in dcb["LambdaFunctionAssociations"]["Items"]:
-                if lfa["LambdaFunctionARN"].startswith(no_ver):
+                # We can only have one origin-request LFA so, if
+                # we find it, we update the function ARN.
+                if lfa["EventType"] == "origin-request":
                     lfa["LambdaFunctionARN"] = func_arn
                     found = True
-                    print("Updating existing redirect function")
+                    print("Updating origin-request function association")
                     break
         if not found:
             lfa_block = dcb["LambdaFunctionAssociations"]
@@ -202,14 +214,14 @@ def add_cloudfront_trigger(session, func_arn):
                 "Adding redirect function, total of %s" %
                 lfa_block["Quantity"])
     cf_client.update_distribution(
-        DistributionConfig=dc,
+        DistributionConfig=distrib_config,
         Id=get_env_var(_CFDIST),
         IfMatch=config["ETag"]
     )
     print("CloudFront distribution updated")
 
 def create_lambda_code(client, content):
-    # Create a brand new function
+    """ Create a brand new Lambda function """
     response = client.create_function(
         FunctionName=lambda_func_from_var(),
         Runtime=_NODE_RUNTIME,
@@ -223,7 +235,7 @@ def create_lambda_code(client, content):
     return response
 
 def update_lambda_code(client, content):
-    # Update the code associated with the existing function
+    """ Update the code associated with the existing function """
     client.update_function_code(
         FunctionName=lambda_func_from_var(),
         ZipFile=content,
@@ -240,8 +252,8 @@ def update_lambda_code(client, content):
     print("Lambda function updated")
     return response
 
-
-if __name__ == '__main__':
+def main():
+    """ Main! """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-r',
@@ -264,3 +276,6 @@ if __name__ == '__main__':
         publish_zip_file(zip_file)
     else:
         print("Skipping update of Lambda function")
+
+if __name__ == '__main__':
+    main()

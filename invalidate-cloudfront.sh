@@ -27,6 +27,7 @@ if [ "$NEW_CHANGES" == "" ]; then
 fi
 
 echo "======== CREATING INVALIDATION ========"
+echo "Paths = $NEW_CHANGES"
 invID=$(aws --profile "$AWS_STATIC_SITE_PROFILE" cloudfront create-invalidation \
 --distribution-id "$CF_DIST_ID_STATIC_LO" --paths $NEW_CHANGES --query Invalidation.Id --output text)
 export invID

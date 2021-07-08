@@ -1,12 +1,12 @@
 #!/bin/bash
 # shellcheck disable=SC2154
 set -e
+NEW_CHANGES=""
 # See if we've got any output from the S3 upload script
 if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
     CHANGES=$(grep upload /tmp/$GITHUB_SHA.tmp | awk '{print $2}')
     # Need to ensure that each change starts with "/" either by removing
     # a leading full-stop or by adding a missing "/"
-    NEW_CHANGES=""
     for change in $CHANGES
     do
         if [[ ${change::1} == "." ]]; then
@@ -20,6 +20,10 @@ if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
     done
     # Clean up ...
     rm "/tmp/$GITHUB_SHA.tmp"
+fi
+
+if [ "$NEW_CHANGES" == "" ]; then
+    NEW_CHANGES="\"/*\""
 fi
 
 echo "======== CREATING INVALIDATION ========"

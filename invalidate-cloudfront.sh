@@ -1,9 +1,30 @@
 #!/bin/bash
 # shellcheck disable=SC2154
 set -e
+# See if we've got any output from the S3 upload script
+if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
+    CHANGES=$(grep upload /tmp/$GITHUB_SHA.tmp | awk '{print $2}')
+    # Need to ensure that each change starts with "/" either by removing
+    # a leading full-stop or by adding a missing "/"
+    NEW_CHANGES=""
+    for change in $CHANGES
+    do
+        if [[ ${change::1} == "." ]]; then
+            new_change=${change:1}
+        elif [[ ${change::1} == "/" ]]; then
+            new_change=change
+        else
+            new_change="/${change}"
+        fi
+        NEW_CHANGES="$NEW_CHANGES \"$new_change\""
+    done
+    # Clean up ...
+    rm "/tmp/$GITHUB_SHA.tmp"
+fi
+
 echo "======== CREATING INVALIDATION ========"
 invID=$(aws --profile "$AWS_STATIC_SITE_PROFILE" cloudfront create-invalidation \
---distribution-id "$CF_DIST_ID_STATIC_LO" --paths "/*" --query Invalidation.Id --output text)
+--distribution-id "$CF_DIST_ID_STATIC_LO" --paths $NEW_CHANGES --query Invalidation.Id --output text)
 export invID
 
 echo "======== INVALIDATION ID ========"

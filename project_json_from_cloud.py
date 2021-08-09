@@ -5,7 +5,7 @@ import copy
 import sys
 
 import requests
-from requests.auth import HTTPBasicAuth
+# from requests.auth import HTTPBasicAuth
 
 import json_generation_lib
 
@@ -16,8 +16,7 @@ PROJECT_INFORMATION = "Project Information"
 PROJECT_TEMPLATE = {
     PROJECT_INFORMATION: {
         "Project Homepage": None,
-        "Theme": [],
-        "Project tag line": None,
+        "How to participate": None,
         "description": None,
         "title": None
     },
@@ -28,7 +27,8 @@ PROJECT_TEMPLATE = {
 # What do the various MD fields map onto name-wise
 FIELD_NAMES = {
     "Home Page": "Project Homepage",
-    "Project Key": "key"
+    "Project Key": "key",
+    "Steering Entity": "How to participate"
 }
 
 # Where do the various MD fields map?
@@ -36,7 +36,8 @@ FIELD_LOCATIONS = {
     "Project Key": None,
     "Theme": PROJECT_INFORMATION,
     "Home Page": PROJECT_INFORMATION,
-    "Project tag line": PROJECT_INFORMATION
+    "Project tag line": PROJECT_INFORMATION,
+    "Steering Entity": PROJECT_INFORMATION
 }
 
 def initialise_auth():
@@ -80,9 +81,10 @@ def get_metadata_fields(jira_auth):
             if name in cf_dict:
                 print("WARNING! Multiple occurrences of '%s'" % name)
             cf_dict[name] = field["id"]
-            md_name = name[3:]
-            if md_name not in FIELD_LOCATIONS:
-                print("WARNING! Cannot find %s in field mappings construct" % name)
+            # Commented out because not all of the MD fields are being used
+            # md_name = name[3:]
+            # if md_name not in FIELD_LOCATIONS:
+            #     print("WARNING! Cannot find %s in field mappings construct" % name)
     # Make sure that all of the field mappings have custom fields ...
     for key in FIELD_LOCATIONS:
         if "MD-%s" % key not in cf_dict:
@@ -132,12 +134,11 @@ def ok_to_proceed(project, md_fields):
     if meta_field(project, "Published", md_fields) != "Yes":
         print("%s is not published - skipping" % project["key"])
         return False
-    if meta_field(project, "Project Key", md_fields) is None:
+    proj_key = meta_field(project, "Project Key", md_fields)
+    if proj_key  is None:
         print("%s is missing project key - skipping" % project["key"])
         return False
-    print("Proceeding with %s" % project["key"])
-    # if project["key"] == "META-12":
-    #     print(json.dumps(project))
+    # print("Proceeding with %s, a.k.a. %s" % (project["key"], proj_key))
     return True
 
 def htmlise_email(name, addr):
@@ -334,23 +335,44 @@ def htmlise_value(value):
         NESTING_LEVEL -= 1
     return result
 
-def process_field(project_dict, parent_level, field_level, field_value):
+def create_how_to_participate(steering_entity):
+    """ Create the text for How to Participate """
+    visit = (
+        "<p>Visit the [Linaro Membership|https://www.linaro.org/membership/] "
+        "page for more information.</p>"
+    )
+    text = (
+        "<p>Participation in this project can be achieved through Linaro Membership. "
+        "The project is managed by %s.</p><p></p>"
+    )
+    if steering_entity is None:
+        return visit
+    return text % steering_entity + visit
+
+def process_field(project_dict, parent_level, field_name, field_value):
     """ Convert the value into something usable for HTML """
     if parent_level is None:
         dict_level = project_dict
     else:
         dict_level = project_dict[parent_level]
+    if field_name == "How to participate":
+        field_value = create_how_to_participate(field_value)
     if isinstance(field_value, dict):
         # We are assuming this is a user blob
-        dict_level[field_level] = htmlise_email(
+        dict_level[field_name] = htmlise_email(
             field_value["displayName"], field_value["emailAddress"])
     elif isinstance(field_value, list):
-        dict_level[field_level] = field_value
-    else:
-        dict_level[field_level] = htmlise_value(field_value)
+        dict_level[field_name] = field_value
+    elif field_value is not None:
+        dict_level[field_name] = htmlise_value(field_value)
 
 def construct_blob(project, md_fields, icon):
     """ Create a project blob for this project """
+    proj_key = meta_field(project, "Project Key", md_fields)
+    # We don't display projects that don't have an icon
+    if icon is None:
+        print("Skipping %s - no project icon" % proj_key)
+        return None
     # DEEPCOPY the project template otherwise Python updates the "master" version
     # Using dict() or copy() only does a shallow copy.
     result = copy.deepcopy(PROJECT_TEMPLATE)
@@ -368,8 +390,14 @@ def construct_blob(project, md_fields, icon):
             field_name = FIELD_NAMES[field]
         else:
             field_name = field
-        if field_value is not None:
-            process_field(result, where, field_name, field_value)
+        process_field(result, where, field_name, field_value)
+    # Don't display projects that don't have anything to say! We don't check
+    # the "how to participate" value because that will always have a value.
+    info = result[PROJECT_INFORMATION]
+    if info["Project Homepage"] is None and \
+            info["description"] is None:
+        print("Skipping %s - no displayable information" % proj_key)
+        return None
     return result
 
 def get_jira_icon(project, md_fields, jira_auth):
@@ -387,30 +415,45 @@ def get_jira_icon(project, md_fields, jira_auth):
     if response.status_code == 200:
         data = response.json()
         return data["avatarUrls"]["48x48"]
-    # Now try Server
-    username = "it.support.bot"
-    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
-    auth = HTTPBasicAuth(username, password)
-    headers = {'content-type': 'application/json'}
-    response = requests.get(
-            "https://projects.linaro.org/rest/api/2/project/%s" % key,
-            headers=headers,
-            auth=auth
-    )
-    if response.status_code == 200:
-        data = response.json()
-        return data["avatarUrls"]["48x48"]
+    # # Now try Server
+    # username = "it.support.bot"
+    # password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
+    # auth = HTTPBasicAuth(username, password)
+    # headers = {'content-type': 'application/json'}
+    # response = requests.get(
+    #         "https://projects.linaro.org/rest/api/2/project/%s" % key,
+    #         headers=headers,
+    #         auth=auth
+    # )
+    # if response.status_code == 200:
+    #     data = response.json()
+    #     return data["avatarUrls"]["48x48"]
     return None
+
+def construct_project_data(jira_projects, md_fields, jira_auth):
+    """ Convert the separate project data into a single Python object. """
+    results = []
+    for project in jira_projects:
+        if ok_to_proceed(project, md_fields):
+            icon = get_jira_icon(project, md_fields, jira_auth)
+            blob = construct_blob(project, md_fields, icon)
+            if blob is not None:
+                results.append(blob)
+    # Sort the projects by title
+    results = sorted(results, key=lambda x: x[PROJECT_INFORMATION]["title"])
+    return {
+        "projects": results
+    }
 
 def main():
     """ Main code. """
     jira_auth = initialise_auth()
     md_fields = get_metadata_fields(jira_auth)
     jira_projects = get_meta_projects(jira_auth)
-    for project in jira_projects:
-        if ok_to_proceed(project, md_fields):
-            icon = get_jira_icon(project, md_fields, jira_auth)
-            print(construct_blob(project, md_fields, icon))
+    data = construct_project_data(jira_projects, md_fields, jira_auth)
+    working_dir = json_generation_lib.working_dir()
+    json_generation_lib.do_the_git_bits(
+        data, "%s/website/_data/projects.json" % working_dir)
 
 if __name__ == '__main__':
     main()

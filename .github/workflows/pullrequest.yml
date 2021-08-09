@@ -11,7 +11,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: SonarQube Scan
-        uses: philips-software/sonar-scanner-action@master
+        uses: philips-software/sonar-scanner-action@main
         with:
           url: ${{ secrets.SONARQUBE_HOST }}
           token: ${{ secrets.SONARQUBE_TOKEN }}

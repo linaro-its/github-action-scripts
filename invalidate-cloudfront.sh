@@ -20,7 +20,7 @@ if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
         NEW_CHANGES="$NEW_CHANGES $new_change"
     done
     # Clean up ...
-    # rm "/tmp/$GITHUB_SHA.tmp"
+    rm "/tmp/$GITHUB_SHA.tmp"
 fi
 
 if [ "$NEW_CHANGES" == "" ]; then

@@ -242,9 +242,8 @@ def add_to_group(data, group_name, level_name, member, company):
     if company == "Linaro":
         # Use that to show we are managing the master site, in which case
         # not all membership options will be matched.
-        print("ERROR: Failed to find %s in members.json when adding %s" % (
+        print("WARNING: Failed to find %s in members.json when adding %s" % (
             group_name, member.ou.value))
-        GOT_ERROR = True
 
 
 def process_groups(data, member, company):

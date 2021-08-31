@@ -56,6 +56,8 @@ def get_repo():
     repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     os.chdir(repo_dir)
     run_git_command("git checkout master")
+    # A little hack to get around a problem with the checkout action
+    run_git_command("git pull")
     return Repo(repo_dir)
 
 

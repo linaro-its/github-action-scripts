@@ -27,16 +27,16 @@ PROJECT_TEMPLATE = {
 # What do the various MD fields map onto name-wise
 FIELD_NAMES = {
     "Home Page": "Project Homepage",
-    "Project Key": "key",
+    "Projects Keys": "key",
     "Steering Entity": "How to participate"
 }
 
 # Where do the various MD fields map?
 FIELD_LOCATIONS = {
-    "Project Key": None,
+    "Projects Keys": None,
     "Theme": PROJECT_INFORMATION,
     "Home Page": PROJECT_INFORMATION,
-    "Project tag line": PROJECT_INFORMATION,
+    # "Project tag line": PROJECT_INFORMATION,
     "Steering Entity": PROJECT_INFORMATION
 }
 
@@ -134,7 +134,7 @@ def ok_to_proceed(project, md_fields):
     if meta_field(project, "Published", md_fields) != "Yes":
         print("%s is not published - skipping" % project["key"])
         return False
-    proj_key = meta_field(project, "Project Key", md_fields)
+    proj_key = meta_field(project, "Projects Keys", md_fields)
     if proj_key  is None:
         print("%s is missing project key - skipping" % project["key"])
         return False
@@ -368,7 +368,10 @@ def process_field(project_dict, parent_level, field_name, field_value):
 
 def construct_blob(project, md_fields, icon):
     """ Create a project blob for this project """
-    proj_key = meta_field(project, "Project Key", md_fields)
+    proj_key = meta_field(project, "Projects Keys", md_fields)
+    # For some undefined reason, this is now a list of keys so just
+    # extract the first one.
+    proj_key = proj_key[0]
     # We don't display projects that don't have an icon
     if icon is None:
         print("Skipping %s - no project icon" % proj_key)
@@ -403,7 +406,7 @@ def construct_blob(project, md_fields, icon):
 def get_jira_icon(project, md_fields, jira_auth):
     """ Figure out the URL for the project's icon """
     # Try Cloud first ...
-    key = meta_field(project, "Project Key", md_fields)
+    key = meta_field(project, "Projects Keys", md_fields)[0]
     headers = {
         'Authorization': 'Basic %s' % jira_auth,
         'content-type': 'application/json'

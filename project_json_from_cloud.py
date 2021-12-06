@@ -21,7 +21,8 @@ PROJECT_TEMPLATE = {
         "title": None
     },
     "icon": None,
-    "key": None
+    "key": None,
+    "membership": None
 }
 
 # What do the various MD fields map onto name-wise
@@ -31,13 +32,25 @@ FIELD_NAMES = {
     "Steering Entity": "How to participate"
 }
 
-# Where do the various MD fields map?
+# Where do the various MD fields map? If a field is listed
+# here then the value from Jira is processed to make sure
+# it can be displayed OK on the webpage.
 FIELD_LOCATIONS = {
     "Projects Keys": None,
     "Theme": PROJECT_INFORMATION,
     "Home Page": PROJECT_INFORMATION,
     # "Project tag line": PROJECT_INFORMATION,
     "Steering Entity": PROJECT_INFORMATION
+}
+
+# Membership level mappings
+MEMBERSHIP_MAPPINGS = {
+    "Core Membership": "code",
+    "Club Membership": "club",
+    "Project Membership": "project",
+    "Edge & Fog Computing Group": "ledge",
+    "Data Center Group": "ldcg",
+    "IoT & Embedded Group": "lite"
 }
 
 def initialise_auth():
@@ -129,12 +142,36 @@ def meta_field(project, key, md_fields):
     return value
 
 
+def process_membership(project, md_fields):
+    """ Get the membership access from Jira & convert to groups """
+    access = meta_field(project, "Membership Access", md_fields)
+    if access is None:
+        return None
+    result = []
+    for level in access:
+        if level in MEMBERSHIP_MAPPINGS:
+            result.append(MEMBERSHIP_MAPPINGS[level])
+        else:
+            print("No membership mapping for %s" % level)
+    return result
+
+
+def get_project_key(project, md_fields):
+    """ Retrieve the singleton project key from Jira's list """
+    proj_key = meta_field(project, "Projects Keys", md_fields)
+    if proj_key is None:
+        return None
+    # The project key is, for some strange reason, a list so just
+    # return the first element.
+    return proj_key[0]
+
+
 def ok_to_proceed(project, md_fields):
     """ Check the various fields to make sure we can process this project """
     if meta_field(project, "Published", md_fields) != "Yes":
         print("%s is not published - skipping" % project["key"])
         return False
-    proj_key = meta_field(project, "Projects Keys", md_fields)
+    proj_key = get_project_key(project, md_fields)
     if proj_key  is None:
         print("%s is missing project key - skipping" % project["key"])
         return False
@@ -368,10 +405,7 @@ def process_field(project_dict, parent_level, field_name, field_value):
 
 def construct_blob(project, md_fields, icon):
     """ Create a project blob for this project """
-    proj_key = meta_field(project, "Projects Keys", md_fields)
-    # For some undefined reason, this is now a list of keys so just
-    # extract the first one.
-    proj_key = proj_key[0]
+    proj_key = get_project_key(project, md_fields)
     # We don't display projects that don't have an icon
     if icon is None:
         print("Skipping %s - no project icon" % proj_key)
@@ -386,6 +420,7 @@ def construct_blob(project, md_fields, icon):
     if description is not None:
         process_field(result, PROJECT_INFORMATION, "description", description)
     result["icon"] = icon
+    result["membership"] = process_membership(project, md_fields)
     for field in FIELD_LOCATIONS:
         where = FIELD_LOCATIONS[field]
         field_value = meta_field(project, field, md_fields)
@@ -405,8 +440,7 @@ def construct_blob(project, md_fields, icon):
 
 def get_jira_icon(project, md_fields, jira_auth):
     """ Figure out the URL for the project's icon """
-    # Try Cloud first ...
-    key = meta_field(project, "Projects Keys", md_fields)[0]
+    key = get_project_key(project, md_fields)
     headers = {
         'Authorization': 'Basic %s' % jira_auth,
         'content-type': 'application/json'
@@ -418,19 +452,6 @@ def get_jira_icon(project, md_fields, jira_auth):
     if response.status_code == 200:
         data = response.json()
         return data["avatarUrls"]["48x48"]
-    # # Now try Server
-    # username = "it.support.bot"
-    # password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
-    # auth = HTTPBasicAuth(username, password)
-    # headers = {'content-type': 'application/json'}
-    # response = requests.get(
-    #         "https://projects.linaro.org/rest/api/2/project/%s" % key,
-    #         headers=headers,
-    #         auth=auth
-    # )
-    # if response.status_code == 200:
-    #     data = response.json()
-    #     return data["avatarUrls"]["48x48"]
     return None
 
 def construct_project_data(jira_projects, md_fields, jira_auth):

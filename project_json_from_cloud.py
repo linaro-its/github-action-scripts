@@ -45,12 +45,15 @@ FIELD_LOCATIONS = {
 
 # Membership level mappings
 MEMBERSHIP_MAPPINGS = {
-    "Core Membership": "code",
-    "Club Membership": "club",
-    "Project Membership": "project",
     "Edge & Fog Computing Group": "ledge",
     "Data Center Group": "ldcg",
     "IoT & Embedded Group": "lite"
+}
+
+IGNORE_MEMBERSHIP_MAPPINGS = {
+    "Core Membership": "code",
+    "Club Membership": "club",
+    "Project Membership": "project"
 }
 
 def initialise_auth():
@@ -146,12 +149,12 @@ def process_membership(project, md_fields):
     """ Get the membership access from Jira & convert to groups """
     access = meta_field(project, "Membership Access", md_fields)
     if access is None:
-        return None
+        return []
     result = []
     for level in access:
         if level in MEMBERSHIP_MAPPINGS:
             result.append(MEMBERSHIP_MAPPINGS[level])
-        else:
+        elif level not in IGNORE_MEMBERSHIP_MAPPINGS:
             print("No membership mapping for %s" % level)
     return result
 

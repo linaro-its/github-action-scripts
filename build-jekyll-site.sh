@@ -148,7 +148,7 @@ function check_for_generated() {
   # "generated" folder, move that up into the repo directory
   # in order to shorten the time to rebuild the image assets.
   pwd
-  if [ -d "$SITE_URL/generated"]; then
+  if [ -d "$SITE_URL/generated" ]; then
     echo "Moving 'generated' folder up a level"
     mv "$SITE_URL/generated" .
   else

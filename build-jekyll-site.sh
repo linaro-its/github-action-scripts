@@ -147,13 +147,17 @@ function check_for_generated() {
   # If the folder for the last build incarnation contains a
   # "generated" folder, move that up into the repo directory
   # in order to shorten the time to rebuild the image assets.
-  pwd
   if [ -d "$SITE_URL/generated" ]; then
+    # Make sure there isn't a pre-existing folder there already
+    # as that will cause the move to fail
+    if [ -d "generated" ]; then
+      echo "Removing pre-existing 'generated' folder"
+      rm -rf generated || exit 1
+    fi
     echo "Moving 'generated' folder up a level"
-    mv "$SITE_URL/generated" .
+    mv "$SITE_URL/generated" . || exit 1
   else
     echo "No 'generated' folder found in $SITE_URL"
-    exit 1
   fi
 }
 

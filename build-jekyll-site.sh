@@ -17,6 +17,8 @@ function make_dirs(){
   if [ ! -d "$SITE_URL" ]; then
     echo "Making output directory \"$SITE_URL\""
     mkdir "$SITE_URL"
+  else
+    echo "Using output directory \"$SITE_URL\""
   fi
 }
 
@@ -141,6 +143,18 @@ function post_build_failed_preview(){
   fi
 }
 
+function check_for_generated() {
+  # If the folder for the last build incarnation contains a
+  # "generated" folder, move that up into the repo directory
+  # in order to shorten the time to rebuild the image assets.
+  if [ -d "$SITE_URL/generated"]; then
+    echo "Moving 'generated' folder up a level"
+    mv "$SITE_URL/generated" .
+  else
+    echo "No 'generated' folder found in $SITE_URL"
+  fi
+}
+
 function docker_build_site() {
   echo "Building the site ..."
   echo "docker run -e JEKYLL_ENV=$JEKYLL_ENV ${DOCKER_MOUNTS[@]} -u $(id -u):$(id -g) -v $GITHUB_WORKSPACE/website:/srv/source linaroits/jekyllsitebuild:latest"
@@ -162,6 +176,7 @@ setup_vars
 setup_testing
 make_dirs || exit 1
 check_multi_repo
+check_for_generated
 docker_build_site
 result=$?
 post_build_cleanup

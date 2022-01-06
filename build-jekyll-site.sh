@@ -148,6 +148,7 @@ function docker_build_site() {
     -t \
     --cap-drop ALL \
     -e JEKYLL_ENV="$JEKYLL_ENV" \
+    -e SKIP_JEKYLL_DOCTOR="$SKIP_JEKYLL_DOCTOR" \
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/group:/etc/group:ro \
     "${DOCKER_MOUNTS[@]}" \

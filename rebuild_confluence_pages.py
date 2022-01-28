@@ -1,9 +1,11 @@
 """
-Update the membership levels and status Confluence pages.
+Update the Confluence pages showing membership levels, membership status
+and member logos.
 """
 #!/usr/bin/python3
 
 import json
+import re
 from io import StringIO
 
 import requests
@@ -11,6 +13,7 @@ import vault_auth
 from ldap3 import SUBTREE, Connection
 from requests.auth import HTTPBasicAuth
 
+IMAGE_URL = "https://static.linaro.org/common/member-logos"
 SERVER = "https://linaro.atlassian.net/wiki"
 AUTH = ""
 CONNECTION = None
@@ -38,6 +41,46 @@ def assert_equal_long_string(string1, string2):
         print(string2)
 
 
+_REGEX1 = (
+    r' ac:macro-id="[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+"'
+)
+
+_REGEX5 = (
+    r' ac:local-id="[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+"'
+)
+
+_REGEX2 = (
+    r' ri:version-at-save="[0-9]+"'
+)
+
+_REGEX3 = (
+    r' data-layout="default"'
+)
+
+_REGEX4 = (
+    r' style="width: [.0-9]+px;"'
+)
+
+def clean_up_page_content(content):
+    """
+    Remove content from the Confluence storage format that
+    we cannot reproduce when we are building the page. This
+    content is, thankfully, not necessary when creating the
+    page!
+    """
+    # Remove ac:schema-version="?"
+    inter1 = re.sub(r' ac:schema-version="\d"', '', content)
+    # Remove ac:macro-id and ac:local-id
+    inter1a = re.sub(_REGEX1, '', inter1)
+    inter2 = re.sub(_REGEX5, '', inter1a)
+    # Remove ri:version-at-save="?"
+    inter3 = re.sub(_REGEX2, '', inter2)
+    # Remove data-layout
+    inter4 = re.sub(_REGEX3, '', inter3)
+    # Remove the table column widths ... risky :)
+    return re.sub(_REGEX4, '', inter4)
+
+
 def save_page(key, body):
     """ Save the page to Confluence if it has been updated """
     result = requests.get(
@@ -45,9 +88,9 @@ def save_page(key, body):
         auth=AUTH)
     if result.status_code == 200:
         j = result.json()
-        current_content = j["body"]["storage"]["value"]
+        current_content = clean_up_page_content(j["body"]["storage"]["value"])
         if body != current_content:
-            # assertEqualLongString(current_content, body)
+            assert_equal_long_string(current_content, body)
             current_version = j["version"]["number"]
             new_version = int(current_version) + 1
             data = {
@@ -109,6 +152,36 @@ def initialise_confluence():
     username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot", "id")
     password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot")
     AUTH = HTTPBasicAuth(username, password)
+
+
+def find_logos():
+    """
+    Returns a list of Member names and their OU name, which is used to
+    name the file on S3. Only members that have a logo are included
+    in the list. A member is defined as having at least one
+    Organizational Status value.
+    """
+    members = {}
+    with CONNECTION:
+        if CONNECTION.search(
+                "ou=accounts,dc=linaro,dc=org",
+                search_filter="(objectClass=organizationalUnit)",
+                search_scope=SUBTREE,
+                attributes=[
+                    "organizationalStatus",
+                    "displayName",
+                    "jpegPhoto",
+                    "ou"
+                    ]
+                ):
+            for entry in CONNECTION.entries:
+                if ("organizationalStatus" in entry and
+                        "displayName" in entry and
+                        entry["organizationalStatus"].values != [] and
+                        entry["jpegPhoto"].value is not None):
+                    name = entry["displayName"].value
+                    members[name] = entry["ou"].value
+    return members
 
 
 def find_members():
@@ -199,6 +272,46 @@ def main():
         new_page.write("<li><p><strong>%s</strong> - %s</p></li>" % (value[0], value[1]))
     new_page.write("</ul>")
     save_page("14358150936", new_page.getvalue())
+
+    # Rebuild member logo page
+    #
+    members = find_logos()
+    new_page = StringIO()
+    new_page.write(
+        "<p>This page shows the logo stored in LDAP for each Member. "
+        "If you need to update a logo, please submit it <strong>in JPEG "
+        "format</strong> as an IT Support ticket.</p><p />"
+    )
+    # Need to generate a list of tuples that are the dictionary
+    # sorted by key (i.e. the display name)
+    sorted_by_value = sorted(
+        members.items(),
+        key=lambda kv: kv[0]
+    )
+    content_html = StringIO()
+    content_html.write("&lt;center&gt;")
+    for value in sorted_by_value:
+        content_html.write("&lt;figure&gt;")
+        content_html.write(f"&lt;img src=\\&quot;{IMAGE_URL}/{value[1]}.jpg\\&quot; alt=\\&quot;{value[0]}\\&quot; height=120&gt;")
+        content_html.write(f"&lt;figcaption&gt;{value[0]}")
+        content_html.write("&lt;/figcaption&gt;&lt;/figure&gt;")
+    content_html.write("&lt;/center&gt;")
+
+    # Unlike the other pages, we need to use the HTML macro because we
+    # are loading the image files over HTTPS.
+    new_page.write(
+        '<ac:structured-macro ac:name="easy-html-macro">'
+        '<ac:parameter ac:name="theme">'
+        '{&quot;label&quot;:&quot;solarized_dark&quot;,&quot;value&quot;:&quot;solarized_dark&quot;}'
+        '</ac:parameter>'
+        '<ac:parameter ac:name="contentByMode">'
+        '{&quot;html&quot;:'
+        f"&quot;{content_html.getvalue()}&quot;,"
+        '&quot;javascript&quot;:&quot;&quot;,'
+        '&quot;css&quot;:&quot;&quot;}'
+        '</ac:parameter></ac:structured-macro>'
+    )
+    save_page("28680519845", new_page.getvalue())
 
     # Rebuild membership levels page
     #

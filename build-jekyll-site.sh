@@ -112,7 +112,7 @@ function post_build_cleanup(){
   fi
   if [ -d "$SITE_URL/../generated" ]; then
     echo "'generated' folder found in $SITE_URL/.."
-  fi
+  else
     echo "No 'generated' folder in $SITE_URL/.."
   fi
 

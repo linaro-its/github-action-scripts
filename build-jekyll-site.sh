@@ -105,6 +105,17 @@ EOF
 }
 
 function post_build_cleanup(){
+  if [ -d "$SITE_URL/generated" ]; then
+    echo "'generated' folder found in $SITE_URL"
+  else
+    echo "No 'generated' folder in $SITE_URL"
+  fi
+  if [ -d "$SITE_URL/../generated" ]; then
+    echo "'generated' folder found in $SITE_URL/.."
+  fi
+    echo "No 'generated' folder in $SITE_URL/.."
+  fi
+
   if [ ! -z "$STATUSES_URL" ]; then
     echo "post_build_cleanup"
     # Remove the temporary config file otherwise git will be a bit unhappy

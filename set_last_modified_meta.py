@@ -71,12 +71,11 @@ def process_file(filename):
 
 
 def main(path):
-    if path[-1] != "/":
-        path += "/"
-    if os.path.isdir(f"{path}blog"):
-        scan_directory(f"{path}blog")
-    if os.path.isdir(f"{path}news"):
-        scan_directory(f"{path}news")
+    os.chdir(path)
+    if os.path.isdir("blog"):
+        scan_directory("blog")
+    if os.path.isdir("news"):
+        scan_directory("news")
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:

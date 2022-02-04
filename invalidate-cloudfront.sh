@@ -1,31 +1,36 @@
 #!/bin/bash
 # shellcheck disable=SC2154
 set -e
-NEW_CHANGES=""
-# See if we've got any output from the S3 upload script
-if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
-    cat "/tmp/$GITHUB_SHA.tmp"
-    CHANGES=$(grep upload /tmp/$GITHUB_SHA.tmp | awk '{print $2}')
-    # Need to ensure that each change starts with "/" either by removing
-    # a leading full-stop or by adding a missing "/"
-    for change in $CHANGES
-    do
-        if [[ ${change::1} == "." ]]; then
-            new_change=${change:1}
-        elif [[ ${change::1} == "/" ]]; then
-            new_change=change
-        else
-            new_change="/${change}"
-        fi
-        NEW_CHANGES="$NEW_CHANGES $new_change"
-    done
-    # Clean up ...
-    rm "/tmp/$GITHUB_SHA.tmp"
-fi
+# NEW_CHANGES=""
+# # See if we've got any output from the S3 upload script
+# if [ -f "/tmp/$GITHUB_SHA.tmp" ]; then
+#     cat "/tmp/$GITHUB_SHA.tmp"
+#     CHANGES=$(grep upload /tmp/$GITHUB_SHA.tmp | awk '{print $2}')
+#     # Need to ensure that each change starts with "/" either by removing
+#     # a leading full-stop or by adding a missing "/"
+#     for change in $CHANGES
+#     do
+#         if [[ ${change::1} == "." ]]; then
+#             new_change=${change:1}
+#         elif [[ ${change::1} == "/" ]]; then
+#             new_change=change
+#         else
+#             new_change="/${change}"
+#         fi
+#         NEW_CHANGES="$NEW_CHANGES $new_change"
+#     done
+#     # Clean up ...
+#     rm "/tmp/$GITHUB_SHA.tmp"
+# fi
 
-if [ "$NEW_CHANGES" == "" ]; then
-    NEW_CHANGES="/*"
-fi
+# if [ "$NEW_CHANGES" == "" ]; then
+#     NEW_CHANGES="/*"
+# fi
+
+# Intelligent cache invalidation seems to cause problems when error responses are cached
+# since the intelligent invalidation doesn't always touch those paths. For now, revert to
+# invalidating the entire site.
+NEW_CHANGES="/*"
 
 echo "======== CREATING INVALIDATION ========"
 echo "--distribution-id \"$CF_DIST_ID_STATIC_LO\" --paths $NEW_CHANGES"

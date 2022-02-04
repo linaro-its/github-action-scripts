@@ -8,5 +8,6 @@ cd "/srv/s3-staging/$SITE_URL" || exit 1
 aws --profile "$AWS_STATIC_SITE_PROFILE" s3 sync --exclude "*" --include "*.html" --cache-control "no-cache, max-age=86400" ./ "s3://$AWS_STATIC_SITE_URL" --delete --no-progress | tee "/tmp/$GITHUB_SHA.tmp"
 # Sync non-HTML files with "normal" cache settings.
 aws --profile "$AWS_STATIC_SITE_PROFILE" s3 sync --include "*" --exclude "*.html" --cache-control "public, max-age=86400" ./ "s3://$AWS_STATIC_SITE_URL" --delete --no-progress | tee -a "/tmp/$GITHUB_SHA.tmp"
+echo "Changing directory to $DIR"
 cd $DIR
 pipenv run python set_last_modified_meta.py

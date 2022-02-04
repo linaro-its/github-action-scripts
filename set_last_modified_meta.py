@@ -9,11 +9,18 @@
 #
 # We need it in this fomat: Wed, 09 Sep 2020 13:00:07 GMT
 
+import sys
 import os
 from datetime import datetime
 
 import boto3
 from bs4 import BeautifulSoup
+
+
+PROFILE_NAME = os.getenv("AWS_STATIC_SITE_PROFILE")
+SESSION = boto3.session.Session(profile_name=PROFILE_NAME)
+S3_CLIENT = SESSION.client('s3')
+BUCKET = os.getenv("AWS_STATIC_SITE_URL")
 
 
 def get_all_html_files(path):
@@ -52,22 +59,26 @@ def process_file(filename):
     dt_obj = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S +0000")
     web_dt = dt_obj.strftime("%a, %d %b %Y %H:%M:%S GMT")
     # Update the metadata on the S3 object
-    s3_object = s3_client.head_object(Bucket=bucket, Key=filename)
+    s3_object = S3_CLIENT.head_object(Bucket=BUCKET, Key=filename)
     s3_object["Metadata"]["last-modified"] = web_dt
-    s3_client.copy_object(
-        Key=filename, Bucket=bucket,
-        CopySource={'Bucket': bucket, 'Key': filename},
+    S3_CLIENT.copy_object(
+        Key=filename, Bucket=BUCKET,
+        CopySource={'Bucket': BUCKET, 'Key': filename},
         CacheControl=s3_object["CacheControl"],
         ContentType=s3_object["ContentType"],
         Metadata=s3_object["Metadata"],
         MetadataDirective='REPLACE')
 
 
-profile_name = os.getenv("AWS_STATIC_SITE_PROFILE")
-session = boto3.session.Session(profile_name=profile_name)
-s3_client = session.client('s3')
-bucket = os.getenv("AWS_STATIC_SITE_URL")
-if os.path.isdir("blog"):
-    scan_directory("blog")
-if os.path.isdir("news"):
-    scan_directory("news")
+def main(path):
+    if path[-1] != "/":
+        path += "/"
+    if os.path.isdir(f"{path}blog"):
+        scan_directory(f"{path}blog")
+    if os.path.isdir(f"{path}news"):
+        scan_directory(f"{path}news")
+
+if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        sys.exit("Path to build directory must be specified")
+    main(sys.argv[1])

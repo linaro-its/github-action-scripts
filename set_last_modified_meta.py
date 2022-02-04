@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 #
+# This scripts updates the modified date on S3 files so that when Linaro's search service
+# pulls in the records, the results can be correctly sorted on things like blog posts and
+# news.
+#
 # Scan the specified directories and, for each HTML file, find the "time"
 # object so that the "x-amz-meta-last-modified" field on the corresponding
 # S3 object can be set.

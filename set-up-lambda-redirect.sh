@@ -6,7 +6,7 @@ if [ -n "$1" ]; then
     PARM1="$1"
     # Some push workflows don't provide the / at the end so check and
     # add if missing.
-    LAST="${$PARM1: -1}"
+    LAST="${PARM1: -1}"
     if [ "$LAST" != "/" ]; then
         PARM1="$PARM1/"
     fi

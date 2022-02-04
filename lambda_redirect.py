@@ -234,6 +234,21 @@ def create_lambda_code(client, content):
     print("Lambda function created")
     return response
 
+def wait_for_update(client):
+    """
+    Wait for the Lambda update to finish before proceeding
+    to the next step. AWS introduced step states so we have
+    to wait otherwise the next step will fail.
+    https://docs.aws.amazon.com/lambda/latest/dg/functions-states.html
+    """
+    while True:
+        result = client.get_function(FunctionName=lambda_func_from_var())
+        last_state = result["Configuration"]["LastUpdateStatus"]
+        if last_state == "Successful":
+            return
+        print(f"Current Lambda update state is {last_state} ... sleeping for a bit")
+        time.sleep(10)
+
 def update_lambda_code(client, content):
     """ Update the code associated with the existing function """
     client.update_function_code(
@@ -241,11 +256,13 @@ def update_lambda_code(client, content):
         ZipFile=content,
         Publish=True
     )
+    wait_for_update(client)
     # Make sure the runtime version gets updated
     client.update_function_configuration(
         FunctionName=lambda_func_from_var(),
         Runtime=_NODE_RUNTIME
     )
+    wait_for_update(client)
     response = client.publish_version(
         FunctionName=lambda_func_from_var()
     )

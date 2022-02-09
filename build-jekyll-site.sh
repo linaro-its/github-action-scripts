@@ -109,7 +109,7 @@ function post_build_cleanup(){
     echo "'generated' folder found in repository directory"
     if [ -d "$SITE_URL/generated" ]; then
       echo "'generated' folder found in $SITE_URL - merging"
-      cp -R "generated/*" "$SITE_URL/generated/"
+      cp -R generated/* "$SITE_URL/generated/"
       echo "Removing 'generated' folder to clean up"
       rm -rf generated
     else

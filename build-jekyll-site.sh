@@ -105,16 +105,19 @@ EOF
 }
 
 function post_build_cleanup(){
-  if [ -d "$SITE_URL/generated" ]; then
-    echo "'generated' folder found in $SITE_URL"
-  else
-    echo "No 'generated' folder in $SITE_URL"
-    if [ -d "$SITE_URL/../generated" ]; then
-      echo "'generated' folder found in $SITE_URL/.. - moving it!"
-      mv "$SITE_URL/../generated" "$SITE_URL"
+  if [ -d "generated" ]; then
+    echo "'generated' folder found in repository directory"
+    if [ -d "$SITE_URL/generated" ]; then
+      echo "'generated' folder found in $SITE_URL - merging"
+      cp -R "generated/*" "$SITE_URL/generated/"
+      echo "Removing 'generated' folder to clean up"
+      rm -rf generated
     else
-      echo "No 'generated' folder in $SITE_URL/.."
+      echo "No 'generated' folder in $SITE_URL - moving"
+      mv "generated" "$SITE_URL"
     fi
+  else
+    echo "No 'generated' folder in repository directory"
   fi
 
   if [ ! -z "$STATUSES_URL" ]; then

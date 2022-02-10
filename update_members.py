@@ -283,7 +283,7 @@ def write_members_json(company, members):
         json.dump(
             data,
             json_file,
-            indent=4,
+            indent=2,
             sort_keys=True
         )
 

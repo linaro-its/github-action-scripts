@@ -471,7 +471,7 @@ def construct_project_data(jira_projects, md_fields, jira_auth):
             blob = construct_blob(project, md_fields, icon)
             if blob is not None:
                 proj_key = get_project_key(project, md_fields)
-                ADDED_TO_JSON[project["key"]] = f"Published {proj_key}"
+                ADDED_TO_JSON[project["key"]] = proj_key
                 results.append(blob)
     # Sort the projects by title
     results = sorted(results, key=lambda x: x[PROJECT_INFORMATION]["title"])
@@ -491,13 +491,13 @@ def main():
         if len(NOT_ADDED_TO_JSON) != 0:
             print("Projects not published:")
             for proj in NOT_ADDED_TO_JSON:
-                print(f"{proj}: {NOT_ADDED_TO_JSON[proj]}")
+                print(f"   {proj}: {NOT_ADDED_TO_JSON[proj]}")
         if len(ADDED_TO_JSON) == 0:
             print("No projects published!")
         else:
             print("Projects published:")
             for proj in ADDED_TO_JSON:
-                print(f"{proj}: {ADDED_TO_JSON[proj]}")
+                print(f"   {proj} aka {ADDED_TO_JSON[proj]}")
         
 
 if __name__ == '__main__':

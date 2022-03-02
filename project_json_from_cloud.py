@@ -416,8 +416,8 @@ def construct_blob(project, md_fields, icon):
     proj_key = get_project_key(project, md_fields)
     # We don't display projects that don't have an icon
     if icon is None:
-        NOT_ADDED_TO_JSON[project["key"]] = f"No project icon found for {proj_key}"
-        return None
+        print(f"WARNING! Using Linaro Sprinkle as fallback icon for {proj_key}")
+        icon = "https://www.linaro.org/assets/images/Linaro-Sprinkle.png"
     # DEEPCOPY the project template otherwise Python updates the "master" version
     # Using dict() or copy() only does a shallow copy.
     result = copy.deepcopy(PROJECT_TEMPLATE)

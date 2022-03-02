@@ -9,6 +9,10 @@ import requests
 
 import json_generation_lib
 
+ADDED_TO_JSON = {}
+
+NOT_ADDED_TO_JSON = {}
+
 NESTING_LEVEL = 0
 
 PROJECT_INFORMATION = "Project Information"
@@ -45,6 +49,7 @@ FIELD_LOCATIONS = {
 
 # Membership level mappings
 MEMBERSHIP_MAPPINGS = {
+    "Consumer Group": "lcg",
     "Edge & Fog Computing Group": "ledge",
     "Data Center Group": "ldcg",
     "IoT & Embedded Group": "lite"
@@ -155,7 +160,7 @@ def process_membership(project, md_fields):
         if level in MEMBERSHIP_MAPPINGS:
             result.append(MEMBERSHIP_MAPPINGS[level])
         elif level not in IGNORE_MEMBERSHIP_MAPPINGS:
-            print("No membership mapping for %s" % level)
+            print(f"Don't know how to map '{level}' onto a LDAP group")
     return result
 
 
@@ -172,11 +177,11 @@ def get_project_key(project, md_fields):
 def ok_to_proceed(project, md_fields):
     """ Check the various fields to make sure we can process this project """
     if meta_field(project, "Published", md_fields) != "Yes":
-        print("%s is not published - skipping" % project["key"])
+        NOT_ADDED_TO_JSON[project["key"]] = "Not marked as published"
         return False
     proj_key = get_project_key(project, md_fields)
     if proj_key  is None:
-        print("%s is missing project key - skipping" % project["key"])
+        NOT_ADDED_TO_JSON[project["key"]] = "No Jira project key"
         return False
     # print("Proceeding with %s, a.k.a. %s" % (project["key"], proj_key))
     return True
@@ -411,7 +416,7 @@ def construct_blob(project, md_fields, icon):
     proj_key = get_project_key(project, md_fields)
     # We don't display projects that don't have an icon
     if icon is None:
-        print("Skipping %s - no project icon" % proj_key)
+        NOT_ADDED_TO_JSON[project["key"]] = f"No project icon found for {proj_key}"
         return None
     # DEEPCOPY the project template otherwise Python updates the "master" version
     # Using dict() or copy() only does a shallow copy.
@@ -437,7 +442,7 @@ def construct_blob(project, md_fields, icon):
     info = result[PROJECT_INFORMATION]
     if info["Project Homepage"] is None and \
             info["description"] is None:
-        print("Skipping %s - no displayable information" % proj_key)
+        NOT_ADDED_TO_JSON[project["key"]] = f"No displayable information for {proj_key}"
         return None
     return result
 
@@ -465,6 +470,8 @@ def construct_project_data(jira_projects, md_fields, jira_auth):
             icon = get_jira_icon(project, md_fields, jira_auth)
             blob = construct_blob(project, md_fields, icon)
             if blob is not None:
+                proj_key = get_project_key(project, md_fields)
+                ADDED_TO_JSON[project["key"]] = f"Published {proj_key}"
                 results.append(blob)
     # Sort the projects by title
     results = sorted(results, key=lambda x: x[PROJECT_INFORMATION]["title"])
@@ -479,8 +486,19 @@ def main():
     jira_projects = get_meta_projects(jira_auth)
     data = construct_project_data(jira_projects, md_fields, jira_auth)
     working_dir = json_generation_lib.working_dir()
-    json_generation_lib.do_the_git_bits(
-        data, "%s/website/_data/projects.json" % working_dir)
+    if json_generation_lib.do_the_git_bits(
+        data, "%s/website/_data/projects.json" % working_dir):
+        if len(NOT_ADDED_TO_JSON) != 0:
+            print("Projects not published:")
+            for proj in NOT_ADDED_TO_JSON:
+                print(f"{proj}: {NOT_ADDED_TO_JSON[proj]}")
+        if len(ADDED_TO_JSON) == 0:
+            print("No projects published!")
+        else:
+            print("Projects published:")
+            for proj in ADDED_TO_JSON:
+                print(f"{proj}: {ADDED_TO_JSON[proj]}")
+        
 
 if __name__ == '__main__':
     main()

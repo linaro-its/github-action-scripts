@@ -78,8 +78,10 @@ def check_repo_status(repo):
     if repo.is_dirty():
         print("Checking in git repository changes")
         checkin_repo(repo)
-    else:
-        print("No changes made to the git repository")
+        return True
+
+    print("No changes made to the git repository")
+    return False
 
 
 def working_dir():
@@ -95,4 +97,4 @@ def do_the_git_bits(data, filename):
             indent=4,
             sort_keys=True
         )
-    check_repo_status(repo)
+    return check_repo_status(repo)

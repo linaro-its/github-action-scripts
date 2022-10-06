@@ -222,8 +222,9 @@ def add_cloudfront_trigger(session, func_arn):
 
 def create_lambda_code(client, content):
     """ Create a brand new Lambda function """
+    function_name = lambda_func_from_var()
     response = client.create_function(
-        FunctionName=lambda_func_from_var(),
+        FunctionName=function_name,
         Runtime=_NODE_RUNTIME,
         Role=_LAMBDA_ROLE % aws_account_id(),
         Handler="index.handler",
@@ -231,6 +232,20 @@ def create_lambda_code(client, content):
         Code={"ZipFile": content},
         Publish=True
     )
+    version = response["Version"]
+    # Wait for the function to become active otherwise we'll
+    # get an exception when we try to use it with CloudFront.
+    waiter = client.get_waiter('function_active_v2')
+    print("Waiting for function to become active...")
+    waiter.wait(
+        FunctionName=function_name,
+        Qualifier=version,
+        WaiterConfig={
+            'Delay': 5,
+            'MaxAttempts': 300
+        }
+    )
+
     print("Lambda function created")
     return response
 

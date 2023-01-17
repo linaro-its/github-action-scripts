@@ -115,7 +115,7 @@ def get_metadata_fields(jira_auth):
 def get_meta_projects(jira_auth):
     """ Get project metadata from Jira """
     result = jira_get(
-        "rest/api/2/search?jql=project=META&status=Open&maxResults=1000", jira_auth
+        "rest/api/2/search?jql=project=META+and+status!=Done&maxResults=1000", jira_auth
     )
     return result["issues"]
 

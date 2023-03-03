@@ -16,19 +16,19 @@ NESTING_LEVEL = 0
 def initialise_ldap():
     """ Return a LDAP Connection. """
     username = "cn=bamboo-bind,ou=binders,dc=linaro,dc=org"
-    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
+    password = json_generation_lib.get_vault_secret(f"secret/ldap/{username}", "BambooBitbucketRole")
     return Connection(
             'ldaps://login.linaro.org',
             user=username,
             password=password,
-            auto_bind=True
+            auto_bind="DEFAULT"
         )
 
 
 def initialise_auth():
     """ Return a HTTP Auth. """
     username = "it.support.bot"
-    password = json_generation_lib.get_vault_secret("secret/ldap/{}".format(username))
+    password = json_generation_lib.get_vault_secret(f"secret/ldap/{username}", "BambooBitbucketRole")
     return HTTPBasicAuth(username, password)
 
 

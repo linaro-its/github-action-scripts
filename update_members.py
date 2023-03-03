@@ -21,8 +21,8 @@ import time
 from datetime import datetime, timezone
 
 import boto3
+import hvac
 import requests
-import vault_auth
 from git import Repo
 from ldap3 import SUBTREE, Connection
 
@@ -31,13 +31,26 @@ GOT_ERROR = False
 INVALIDATE_CACHE = False
 
 
-def get_vault_secret(user_id):
+def get_vault_secret(secret_path):
     """ Get a secret from Linaro Vault """
-    secret = vault_auth.get_secret(
-        user_id,
-        iam_role="vault_update_members",
-        url="https://login.linaro.org:8200"
-    )
+    url = f"http://169.254.169.254/latest/meta-data/iam/security-credentials/BambooBitbucketRole"
+    response = requests.get(url=url)
+    response.raise_for_status()
+    credentials = response.json()
+    client = hvac.Client(url="https://login.linaro.org:8200")
+    token = client.auth.aws.iam_login(credentials['AccessKeyId'], credentials['SecretAccessKey'], credentials['Token'], role="vault_jira_project_updater")
+    header = {
+        "X-Vault-Token": token
+    }
+    response = requests.get(
+        f"https://login.linaro.org:8200/v1/{secret_path}",
+        headers=header)
+    # Revoke the Vault token now that we're done with it.
+    requests.post(
+        "https://login.linaro.org:8200/v1/auth/token/revoke-self",
+        headers=header)
+    response.raise_for_status
+    secret = response.json()
     return secret["data"]["pw"]
 
 
@@ -49,7 +62,7 @@ def initialise_ldap():
             'ldaps://login.linaro.org',
             user=username,
             password=password,
-            auto_bind=True
+            auto_bind="DEFAULT"
         )
 
 

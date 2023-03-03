@@ -64,9 +64,9 @@ IGNORE_MEMBERSHIP_MAPPINGS = {
 def initialise_auth():
     """ Return encoded authentication """
     username = json_generation_lib.get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "id")
+        "secret/user/atlassian-cloud-it-support-bot", "BambooBitbucketRole", "id")
     password = json_generation_lib.get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "pw")
+        "secret/user/atlassian-cloud-it-support-bot", "BambooBitbucketRole", "pw")
     # Construct a string of the form username:password
     combo = "%s:%s" % (username, password)
     # Encode it to Base64

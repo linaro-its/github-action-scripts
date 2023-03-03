@@ -10,8 +10,9 @@ import json
 import os
 import socket
 import sys
+import traceback
 from os.path import join
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 import aiohttp
 import requests
@@ -34,7 +35,24 @@ CHROME = {
                   'Chrome/41.0.2228.0 Safari/537.36'
 }
 
+# This is a list of files that should always be removed from the
+# ALL_FILES list before printing the list of unreferenced files.
+# It is, unfortunately, a bit of a hacky list since language
+# variants cause their own versions of certain files to be added
+# which means that this list must include all potential languages.
+PROTECTED_FILES = [
+    "./robots.txt",
+    "./favicon.ico",
+    "./admin/index.html",
+    "./admin/config.yml",
+    "./404.html",
+    "./ch/404.html",
+    "./feed.xml",
+    "./ch/feed.xml"
+]
+
 # Globals
+ALL_FILES = []
 FAILED_DIRS = []
 FAILED_LINKS = []
 FILE_LINK_PAIRS = []
@@ -44,6 +62,14 @@ HTML_CACHE_RESULTS = {}
 DNS_SKIP = []
 VERBOSE = 0
 OUTPUT_FILE = None
+
+def reference_file(filename):
+    """ If filename is in the list, remove it """
+    if filename in ALL_FILES:
+        ALL_FILES.remove(filename)
+        return True
+    return False
+
 
 def drop_dot(string_to_check):
     """ If the string starts with a full-stop, drop it. """
@@ -69,11 +95,17 @@ def process_html_files(result, files, root):
     For a given list of files, update the list with
     any that are HTML files.
     """
+    global ALL_FILES # pylint: disable=global-statement
     for name in files:
-        if name.endswith((".html", ".htm")):
-            file_path = os.path.join(root, name)
-            if file_path not in result:
+        file_path = os.path.join(root, name)
+        if name.endswith((".html", ".htm")) and \
+            file_path not in result:
                 result.append(file_path)
+        # We record ALL of the files that have been found
+        # so that we can then remove them when they are
+        # referenced and report any files not touched.
+        if file_path not in ALL_FILES:
+            ALL_FILES.append(file_path)
 
 
 def process_html_dirs(dirs, root):
@@ -142,6 +174,7 @@ def validate_file_link(filename, text):
     # websites doesn't support redirecting from "foo" to "foo/".
     result = os.path.isfile(combined_path)
     if result:
+        reference_file(combined_path)
         return None
     return combined_path
 
@@ -155,7 +188,7 @@ def matched_skip(text, skip_list):
     return False
 
 
-def validate_link(filename, text):
+def validate_link(filename, text, check_unrefs_only=False):
     """ Main link validation processor. """
     global FILE_LINK_PAIRS # pylint: disable=global-statement
     global UNIQUE_LINKS # pylint: disable=global-statement
@@ -173,6 +206,10 @@ def validate_link(filename, text):
     # Check the URL to see if it is a web link - that is all we check.
     obj = urlparse(text)
     if not args.noexternal and (obj.scheme == "http" or obj.scheme == "https"):
+        # If we are checking unreferenced files, don't worry about
+        # external links.
+        if check_unrefs_only:
+            return None
         # We use "file_link_pairs" to track which files reference which
         # URLs - we only check URLs *once* but then flag up all
         # refernces to the link.
@@ -329,9 +366,88 @@ def check_file(filename, skip_list):
         soup = BeautifulSoup(data, 'html.parser')
         check_links(filename, soup, file_failed_links)
         check_linked_images(filename, soup, file_failed_links)
+        check_remaining_references(filename, soup)
     except Exception as exception: # pylint: disable=broad-except
-        print("FAILED TO READ '%s' - %s" % (filename, str(exception)))
+        print(f"FAILED TO READ '{filename}'")
+        traceback.print_exc()
     return file_failed_links
+
+
+def check_remaining_references(filename, soup):
+    """
+    For all non-file/image links, remove the referenced files from
+    the global list.
+    """
+    links = soup.find_all('link')
+    for link in links:
+        file = link.get('href')
+        validate_link(filename, file, True)
+        validate_link(filename, f"{file}.gz", True)
+    # A trickier bit to check is the "picture" attribute which uses
+    # "source" and then a "data-srcset" tag. The "data-srcset" tag
+    # lists multiple images and needs to be parsed/split up into
+    # individual filenames for removal from the global list.
+    links = soup.find_all('source')
+    for link in links:
+        process_sources(link.get('data-srcset'))
+    # Script loading
+    links = soup.find_all('script')
+    for link in links:
+        validate_link(filename, link.get('src'), True)
+    # Forms
+    links = soup.find_all('form')
+    for link in links:
+        validate_link(filename, link.get('action'), True)
+    
+
+def process_sources(file_refs):
+    """ Check the source set off against the list of files """
+    if file_refs is None:
+        return
+
+    # A sample data-srcset:
+    # data-srcset="/../generated/assets/images/content/code_banner-576-65b154.webp 576w,
+    #  /../generated/assets/images/content/code_banner-768-65b154.webp 768w,
+    #  /../generated/assets/images/content/code_banner-992-65b154.webp 992w,
+    #  /../generated/assets/images/content/code_banner-1200-65b154.webp 1200w,
+    #  /../generated/assets/images/content/code_banner-1920-65b154.webp 1920w"
+    #
+    # So, start by splitting on the comma:
+    parts = file_refs.split(",")
+    # then interate, splitting on the space:
+    removed_from_list = False
+    for part in parts:
+        file = part.strip().split(" ")[0]
+        if file[:4] == "/../":
+            # Trim "/." off the front so that we're left with "./" which will
+            # then match against the filenames
+            file = file[2:]
+            if reference_file(file):
+                removed_from_list = True
+        else:
+            print(f"Unable to parse '{file}'")
+            print(f"Original was '{part}'")
+            sys.exit(1)
+    # Finally, if we removed the generated assets from the list, try(!) to
+    # extract the filename of the original source image so that we can mark
+    # that as referenced.
+    if removed_from_list:
+        orig = parts[0].strip().split(" ")[0]
+        # Strip off "/../generated" and then add a leading full-stop to
+        # match the full path to the original image.
+        orig = "." + orig[13:]
+        # Now split the string at the first hyphen which *should* split it at
+        # the size indicator.
+        orig_parts = orig.split("-")
+        to_match = orig_parts[0]
+        matched = None
+        # and try to find the original
+        for unref in ALL_FILES:
+            if unref[:len(to_match)] == to_match:
+                matched = unref
+                break
+        if matched is not None:
+            reference_file(matched)
 
 
 def check_links(filename, soup, file_failed_links):
@@ -497,7 +613,7 @@ def output_failed_links():
         report_failed_links(FAILED_LINKS, output_to)
     if OUTPUT_FILE is not None:
         output_to.close()
-    sys.exit(1)
+    # sys.exit(1)
 
 
 def report_failed_dirs(dir_list, output_to):
@@ -524,6 +640,8 @@ if __name__ == '__main__':
     parser.add_argument('--skip-dns-check', nargs='?', default=None,
                         help='specifies text file of FQDNs to skip the DNS '
                         'check on')
+    parser.add_argument('--referenced-file-list', nargs='?', default=None,
+                        help='specified text file of ')
     parser.add_argument('-s', '--skip-path', action='append',
                         help='specifies a path to skip when checking URLs')
     parser.add_argument('-v', '--verbose', action='count')
@@ -545,7 +663,7 @@ if __name__ == '__main__':
     parser.add_argument('--github-access-token', action='store')
     args = parser.parse_args()
 
-    print("Linaro Link Checker (2021-02-11)")
+    print("Linaro Link Checker (2022-03-04)")
 
     if args.verbose is not None:
         VERBOSE = args.verbose
@@ -572,3 +690,18 @@ if __name__ == '__main__':
         args.create_github_issue,
         args.assign_github_issue,
         args.github_access_token)
+
+    # Before we produce a list of unreferenced files, mark the obvious files
+    # as referenced ... this is a bit hacky there 
+    for file in PROTECTED_FILES:
+        reference_file(file)
+
+    if len(ALL_FILES) == 0:
+        print("All files are referenced.")
+    else:
+        print("The following files do not appear to be referenced:")
+        size = 0
+        for unref in ALL_FILES:
+            print(unref)
+            size += os.path.getsize(unref)
+        print(f"Possible size to reclaim: {size/1024**2}MB")

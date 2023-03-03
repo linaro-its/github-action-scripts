@@ -4,21 +4,35 @@ import subprocess
 import sys
 import tempfile
 
-import vault_auth
+import requests
+import hvac
 from git import Repo
 
 SECRETS_CACHE = None
 
-def get_vault_secret(secret_path, key="pw"):
+def get_vault_secret(secret_path, instance_role_name, key="pw"):
     global SECRETS_CACHE # pylint: disable=global-statement
     if SECRETS_CACHE is None:
         SECRETS_CACHE = {}
     if secret_path not in SECRETS_CACHE or key not in SECRETS_CACHE[secret_path]:
-        secret = vault_auth.get_secret(
-            secret_path,
-            iam_role="vault_jira_project_updater",
-            url="https://login.linaro.org:8200"
-        )
+        url = f"http://169.254.169.254/latest/meta-data/iam/security-credentials/{instance_role_name}"
+        response = requests.get(url=url)
+        response.raise_for_status()
+        credentials = response.json()
+        client = hvac.Client(url="https://login.linaro.org:8200")
+        token = client.auth.aws.iam_login(credentials['AccessKeyId'], credentials['SecretAccessKey'], credentials['Token'], role="vault_jira_project_updater")
+        header = {
+            "X-Vault-Token": token
+        }
+        response = requests.get(
+            f"https://login.linaro.org:8200/v1/{secret_path}",
+            headers=header)
+        # Revoke the Vault token now that we're done with it.
+        requests.post(
+            "https://login.linaro.org:8200/v1/auth/token/revoke-self",
+            headers=header)
+        response.raise_for_status
+        secret = response.json()
         if secret_path not in SECRETS_CACHE:
             SECRETS_CACHE[secret_path] = {}
         SECRETS_CACHE[secret_path][key] = secret["data"][key]
@@ -42,7 +56,7 @@ def run_git_command(command):
 
     # Fetch the SSH key from Vault and store it in a temporary file
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
-        pem = get_vault_secret("secret/misc/linaro-build-github.pem")
+        pem = get_vault_secret("secret/misc/linaro-build-github.pem", "BambooBitbucketRole")
         pem_file.write(pem)
         pkf = pem_file.name
 

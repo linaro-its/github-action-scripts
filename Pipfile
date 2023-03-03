@@ -12,12 +12,12 @@ bs4 = "*"
 aiohttp = "*"
 requests = "*"
 boto3 = "*"
-vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
 gitpython = "*"
 google-api-python-client = "1.12.8"
 google-auth = "1.23.0"
 ldap3 = "*"
 metadata-parser = "*"
+hvac = "*"
 
 [requires]
 python_version = "3.8"

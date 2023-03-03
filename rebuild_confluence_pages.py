@@ -9,7 +9,7 @@ import re
 from io import StringIO
 
 import requests
-import vault_auth
+import hvac
 from ldap3 import SUBTREE, Connection
 from requests.auth import HTTPBasicAuth
 
@@ -123,13 +123,26 @@ def save_page(key, body):
         print("%s: Couldn't retrieve content" % key)
 
 
-def get_vault_secret(user_id, key="pw"):
+def get_vault_secret(secret_path, key="pw"):
     """ Get a secret back from Vault """
-    secret = vault_auth.get_secret(
-        user_id,
-        iam_role="vault_confluence_ldap_automation",
-        url="https://login.linaro.org:8200"
-    )
+    url = f"http://169.254.169.254/latest/meta-data/iam/security-credentials/BambooBitbucketRole"
+    response = requests.get(url=url)
+    response.raise_for_status()
+    credentials = response.json()
+    client = hvac.Client(url="https://login.linaro.org:8200")
+    token = client.auth.aws.iam_login(credentials['AccessKeyId'], credentials['SecretAccessKey'], credentials['Token'], role="vault_jira_project_updater")
+    header = {
+        "X-Vault-Token": token
+    }
+    response = requests.get(
+        f"https://login.linaro.org:8200/v1/{secret_path}",
+        headers=header)
+    # Revoke the Vault token now that we're done with it.
+    requests.post(
+        "https://login.linaro.org:8200/v1/auth/token/revoke-self",
+        headers=header)
+    response.raise_for_status
+    secret = response.json()
     return secret["data"][key]
 
 

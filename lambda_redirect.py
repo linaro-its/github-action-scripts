@@ -112,7 +112,7 @@ def add_file_to_zip(ziphandle, source_file, zip_filename):
     with open(source_file, "r") as handle:
         data = handle.read()
     info = zipfile.ZipInfo(zip_filename)
-    info.date_time = time.localtime()
+    info.date_time = time.localtime() # type: ignore
     info.external_attr = 0o100644 << 16
     ziphandle.writestr(info, data)
 
@@ -235,7 +235,7 @@ def create_lambda_code(client, content):
     version = response["Version"]
     # Wait for the function to become active otherwise we'll
     # get an exception when we try to use it with CloudFront.
-    waiter = client.get_waiter('function_active_v2')
+    waiter = client.get_waiter('function_active')
     print("Waiting for function to become active...")
     waiter.wait(
         FunctionName=function_name,

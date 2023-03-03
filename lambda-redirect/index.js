@@ -25,7 +25,6 @@ const applyRules = function(e) {
   console.log(`Processing ${uri}`);
 
   return rewriteRules.reduce((acc, rule) => {
-   
     if (acc.skip == true) {
       return acc;
     }
@@ -51,10 +50,11 @@ const applyRules = function(e) {
       }
       return acc;
     }
+    // Gone rules are no more - reused G for global replace
     // Gone
-    if (rule.gone) {
-      return {'res': {status: '410',statusDescription: 'Gone'},'skip': rule.last};
-    }
+    // if (rule.gone) {
+    //   return {'res': {status: '410',statusDescription: 'Gone'},'skip': rule.last};
+    // }
 
     // Forbidden
     if (rule.forbidden) {

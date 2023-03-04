@@ -34,7 +34,9 @@ INVALIDATE_CACHE = False
 def initialise_ldap():
     """ Return a LDAP Connection """
     username = "cn=update-members,ou=binders,dc=linaro,dc=org"
-    password = get_vault_secret("secret/ldap/{}".format(username))
+    password = get_vault_secret(
+        "secret/ldap/{}".format(username),
+        iam_role="arn:aws:iam::968685071553:role/vault_update_members")
     return Connection(
             'ldaps://login.linaro.org',
             user=username,

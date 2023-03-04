@@ -34,7 +34,7 @@ def get_vault_secret(secret_path: str, iam_role: str, key: str = "pw") -> str:
         token = client.auth.aws.iam_login(
             assumed_credentials['AccessKeyId'],
             assumed_credentials['SecretAccessKey'],
-            assumed_credentials['Token'])
+            assumed_credentials['SessionToken'])
         # Now request the secret with that token
         header = {
             "X-Vault-Token": token

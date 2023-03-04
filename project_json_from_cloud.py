@@ -8,6 +8,7 @@ import requests
 # from requests.auth import HTTPBasicAuth
 
 import json_generation_lib
+from linaro_vault_lib import get_vault_secret
 
 ADDED_TO_JSON = {}
 
@@ -63,10 +64,10 @@ IGNORE_MEMBERSHIP_MAPPINGS = {
 
 def initialise_auth():
     """ Return encoded authentication """
-    username = json_generation_lib.get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "BambooBitbucketRole", "id")
-    password = json_generation_lib.get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "BambooBitbucketRole", "pw")
+    username = get_vault_secret(
+        "secret/user/atlassian-cloud-it-support-bot", "id")
+    password = get_vault_secret(
+        "secret/user/atlassian-cloud-it-support-bot", "pw")
     # Construct a string of the form username:password
     combo = "%s:%s" % (username, password)
     # Encode it to Base64

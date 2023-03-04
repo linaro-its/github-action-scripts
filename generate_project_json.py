@@ -8,6 +8,7 @@ from ldap3 import SUBTREE, Connection
 from requests.auth import HTTPBasicAuth
 
 import json_generation_lib
+from linaro_vault_lib import get_vault_secret
 
 PI_SLUG = "Project Information"
 NESTING_LEVEL = 0
@@ -16,7 +17,7 @@ NESTING_LEVEL = 0
 def initialise_ldap():
     """ Return a LDAP Connection. """
     username = "cn=bamboo-bind,ou=binders,dc=linaro,dc=org"
-    password = json_generation_lib.get_vault_secret(f"secret/ldap/{username}", "BambooBitbucketRole")
+    password = get_vault_secret(f"secret/ldap/{username}")
     return Connection(
             'ldaps://login.linaro.org',
             user=username,
@@ -28,7 +29,7 @@ def initialise_ldap():
 def initialise_auth():
     """ Return a HTTP Auth. """
     username = "it.support.bot"
-    password = json_generation_lib.get_vault_secret(f"secret/ldap/{username}", "BambooBitbucketRole")
+    password = get_vault_secret(f"secret/ldap/{username}")
     return HTTPBasicAuth(username, password)
 
 

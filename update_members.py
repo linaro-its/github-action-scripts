@@ -21,37 +21,14 @@ import time
 from datetime import datetime, timezone
 
 import boto3
-import hvac
 import requests
-from git import Repo
+from git.repo import Repo
 from ldap3 import SUBTREE, Connection
+from linaro_vault_lib import get_vault_secret
 
 IMAGE_URL = "https://static.linaro.org/common/member-logos"
 GOT_ERROR = False
 INVALIDATE_CACHE = False
-
-
-def get_vault_secret(secret_path):
-    """ Get a secret from Linaro Vault """
-    url = f"http://169.254.169.254/latest/meta-data/iam/security-credentials/BambooBitbucketRole"
-    response = requests.get(url=url)
-    response.raise_for_status()
-    credentials = response.json()
-    client = hvac.Client(url="https://login.linaro.org:8200")
-    token = client.auth.aws.iam_login(credentials['AccessKeyId'], credentials['SecretAccessKey'], credentials['Token'], role="vault_jira_project_updater")
-    header = {
-        "X-Vault-Token": token
-    }
-    response = requests.get(
-        f"https://login.linaro.org:8200/v1/{secret_path}",
-        headers=header)
-    # Revoke the Vault token now that we're done with it.
-    requests.post(
-        "https://login.linaro.org:8200/v1/auth/token/revoke-self",
-        headers=header)
-    response.raise_for_status
-    secret = response.json()
-    return secret["data"]["pw"]
 
 
 def initialise_ldap():

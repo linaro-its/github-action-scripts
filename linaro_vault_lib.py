@@ -37,7 +37,7 @@ def get_vault_secret(secret_path: str, iam_role: str, key: str = "pw") -> str:
             assumed_credentials['SessionToken'])
         # Now request the secret with that token
         header = {
-            "X-Vault-Token": token
+            "X-Vault-Token": token["auth"]["client_token"]
         }
         response = requests.get(
             f"https://login.linaro.org:8200/v1/{secret_path}",

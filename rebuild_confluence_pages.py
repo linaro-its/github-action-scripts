@@ -128,7 +128,8 @@ def initialise_ldap():
     """ Initialise a LDAP connection """
     global CONNECTION # pylint: disable=global-statement
     username = "cn=moinmoin,ou=binders,dc=linaro,dc=org"
-    password = get_vault_secret("secret/ldap/{}".format(username))
+    password = get_vault_secret("secret/ldap/{}".format(username),
+                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
     CONNECTION = Connection(
             'ldaps://login.linaro.org',
             user=username,
@@ -140,8 +141,11 @@ def initialise_ldap():
 def initialise_confluence():
     """ Initialise the Confluence authentication """
     global AUTH # pylint: disable=global-statement
-    username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot", "id")
-    password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot")
+    username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
+                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation",
+                                key="id")
+    password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
+                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
     AUTH = HTTPBasicAuth(username, password)
 
 

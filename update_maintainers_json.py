@@ -52,7 +52,9 @@ def initialise_auth():
     # Username (email) of user to run scripts as.
     username = "kyle.kirkby@linaro.org"
     # Get the Google Service Account JSON blob
-    google_service_account_json = json.loads(get_vault_secret("secret/misc/google-gitmaintainerssync.json"))
+    google_service_account_json = json.loads(get_vault_secret(
+        "secret/misc/google-gitmaintainerssync.json",
+        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater"))
     # Instantiate a new service account auth object
     service_account_auth = service_account.Credentials.from_service_account_info(
             google_service_account_json, scopes=SCOPES)

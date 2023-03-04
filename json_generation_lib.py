@@ -24,7 +24,8 @@ def run_git_command(command):
 
     # Fetch the SSH key from Vault and store it in a temporary file
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
-        pem = get_vault_secret("secret/misc/linaro-build-github.pem")
+        pem = get_vault_secret("secret/misc/linaro-build-github.pem",
+                               iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater")
         pem_file.write(pem)
         pkf = pem_file.name
 

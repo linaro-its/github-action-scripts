@@ -65,9 +65,13 @@ IGNORE_MEMBERSHIP_MAPPINGS = {
 def initialise_auth():
     """ Return encoded authentication """
     username = get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "id")
+        "secret/user/atlassian-cloud-it-support-bot",
+        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
+        key="id")
     password = get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot", "pw")
+        "secret/user/atlassian-cloud-it-support-bot",
+        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
+        key="pw")
     # Construct a string of the form username:password
     combo = "%s:%s" % (username, password)
     # Encode it to Base64

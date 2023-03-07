@@ -414,7 +414,7 @@ def process_sources(file_refs):
     #
     # So, start by splitting on the comma:
     parts = file_refs.split(",")
-    # then interate, splitting on the space:
+    # then iterate, splitting on the space:
     removed_from_list = False
     for part in parts:
         file = part.strip().split(" ")[0]
@@ -422,6 +422,10 @@ def process_sources(file_refs):
             # Trim "/." off the front so that we're left with "./" which will
             # then match against the filenames
             file = file[2:]
+            if reference_file(file):
+                removed_from_list = True
+        elif file[0] == "/":
+            file = "." + file
             if reference_file(file):
                 removed_from_list = True
         else:

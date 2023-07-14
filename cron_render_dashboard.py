@@ -7,7 +7,7 @@ working_dir = json_generation_lib.working_dir()
 output_file = f"{working_dir}/website/_pages/IoTIntegrationLab.md"
 repo = json_generation_lib.get_repo()
 # Render the dashboard file
-with open("header_iot_int_lab.md", "r") as input_file:
+with open("/srv/github-action-scripts/header_iot_int_lab.md", "r") as input_file:
     with open(output_file, "w") as output_file:
         integration_lab_dashboard.render_dashboard(
             ['blueprints/nightly', 'trustedsubstrate/acs-testing'],

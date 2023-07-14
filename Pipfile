@@ -18,6 +18,7 @@ google-auth = "1.23.0"
 ldap3 = "*"
 metadata-parser = "*"
 hvac = "*"
+squad-client = "*"
 
 [requires]
 python_version = "3.8"

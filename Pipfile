@@ -10,7 +10,7 @@ debugpy = "*"
 [packages]
 bs4 = "*"
 aiohttp = "*"
-requests = "*"
+requests = ">=2.31.0"
 boto3 = "*"
 gitpython = "*"
 google-api-python-client = "1.12.8"

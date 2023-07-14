@@ -17,4 +17,4 @@ with open("/srv/github-action-scripts/header_iot_int_lab.md", "r") as input_file
             ['capsule-updates', 'secure-boot-enabled', 'measured-boot', 'filesystem-encryption', 'xtest', 'acs'],
             input_file)
 # Did anything change?
-json_generation_lib.check_repo_status(repo)
+json_generation_lib.check_repo_status(repo, "Update IoT Dashboard")

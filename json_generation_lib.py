@@ -42,17 +42,17 @@ def get_repo():
     return Repo(repo_dir)
 
 
-def checkin_repo(repo):
+def checkin_repo(repo, message):
     repo_dir = "%s/website" % os.getenv("GITHUB_WORKSPACE")
     os.chdir(repo_dir)
     # Only use run_git_command when we need the SSH key involved.
     run_command("git add --all")
-    run_command("git commit -m \"Update project data\"")
+    run_command(f"git commit -m \"{message}\"")
     run_git_command(
         "git push --set-upstream origin %s" % repo.active_branch.name)
 
 
-def check_repo_status(repo):
+def check_repo_status(repo, message):
     # Add any untracked files to the repository
     untracked_files = repo.untracked_files
     for f in untracked_files:
@@ -60,7 +60,7 @@ def check_repo_status(repo):
     # See if we have changed anything
     if repo.is_dirty():
         print("Checking in git repository changes")
-        checkin_repo(repo)
+        checkin_repo(repo, message)
         return True
 
     print("No changes made to the git repository")
@@ -80,4 +80,4 @@ def do_the_git_bits(data, filename):
             indent=4,
             sort_keys=True
         )
-    return check_repo_status(repo)
+    return check_repo_status(repo, "Update project data")

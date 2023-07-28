@@ -25,7 +25,7 @@ _LAMBDA_ROLE = (
     "arn:aws:iam::%s:role/service-role/lambda-redirect-role"
 )
 _NODE_RUNTIME = (
-    "nodejs12.x"
+    "nodejs18.x"
 )
 
 

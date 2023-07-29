@@ -63,6 +63,7 @@ const applyRules = function(e) {
 
     // Redirect
     if (rule.redirect) {
+      console.log(`Redirecting to ${uri.replace(rule.regexp, rule.replace)}`);
       return {
         'res': {
           status: rule.redirect || 301,

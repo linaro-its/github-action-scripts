@@ -170,12 +170,17 @@ def validate_file_link(filename, text):
             print("Unescaped file: %s" % unescaped_path)
     # needs to be a file or directory ... but if it is a directory, that means
     # the path didn't end with a "/" (because we would have added index.html)
-    # so we now flag that as a failure because Linaro's implementation of static
-    # websites doesn't support redirecting from "foo" to "foo/".
-    result = os.path.isfile(combined_path)
-    if result:
+    # so we now add that back to the path so that the file referencing process
+    # correctly marks the file as referenced.
+    if os.path.isfile(combined_path):
         reference_file(combined_path)
         return None
+    if os.path.isdir(combined_path):
+        # Is there a "index.html" inside that folder?
+        temp_path = f"{combined_path}/index.html"
+        if os.path.isfile(temp_path):
+            reference_file(temp_path)
+            return None
     return combined_path
 
 

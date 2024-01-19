@@ -84,6 +84,7 @@ def get_members(ldap_conn):
     """ Get all Members from LDAP """
     global GOT_ERROR # pylint: disable=global-statement
     results = []
+    results_with_images = []
     with ldap_conn:
         if ldap_conn.search(
                 "ou=accounts,dc=linaro,dc=org",
@@ -106,7 +107,13 @@ def get_members(ldap_conn):
         else:
             print("ERROR: LDAP search for OUs failed")
             GOT_ERROR = True
-    return results
+    # Remove any entries that do not have images
+    for item in results:
+        if item.jpegPhoto.value is not None:
+            results_with_images.append(item)
+        else:
+            print(f"Dropping {item.ou.value} as a member as they don't have an image")
+    return results_with_images
 
 
 # def delete_member_file(ldap_rec):
@@ -303,6 +310,11 @@ def update(company):
     # to include, and we filter based off the displayName attribute, since
     # that is critical to the markdown file. No attribute means ignore for
     # this.
+    #
+    # Change as of 19th Jan: if a Member company doesn't have a logo, it
+    # does NOT get included in the member data.
+    # See https://linaro-servicedesk.atlassian.net/browse/ITS-17890 for
+    # the reason why.
     connection = initialise_ldap()
     members = get_members(connection)
     connection.unbind()

@@ -352,7 +352,10 @@ def create_github_pull_request(company, repo):
         # Request that Kyle reviews this PR
         data = {
             "reviewers": [
-                "kylekirkby"
+                "pcolmer",
+                "DelaraGi",
+                "prasanthcambridge",
+                "louismorgan-linaro"
             ]
         }
         url = (

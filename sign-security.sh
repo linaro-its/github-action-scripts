@@ -4,7 +4,7 @@ if [[ -f "security.txt" ]]; then
     EXPIRE=$(date +%Y-%m-%dT00:00:00.000Z -d "$TODAY + 6 month")
     cp security.txt temp-security.txt
     echo "Expires: $EXPIRE" >> temp-security.txt
-    gpg --clearsign --default-key psirt@linaro.org --passphrase Radial-swipe-Division-Fault-2Accustom-Jaw6-4duration-potato temp-security.txt
+    gpg --clearsign --default-key psirt@linaro.org --pinentry-mode loopback --passphrase Radial-swipe-Division-Fault-2Accustom-Jaw6-4duration-potato temp-security.txt
     rm temp-security.txt
     mv temp-security.txt.asc security.txt.asc
 fi

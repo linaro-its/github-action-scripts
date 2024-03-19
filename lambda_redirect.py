@@ -1,5 +1,5 @@
-""" Set up the Lambda handler for URL redirects """
 #!/usr/bin/python3
+""" Set up the Lambda handler for URL redirects """
 
 
 import argparse
@@ -29,19 +29,28 @@ _NODE_RUNTIME = (
 )
 
 
-def get_env_var(env):
+def get_env_var(env, error_if_missing=True):
     """ Get the required environment variable's value """
     env_value = os.environ.get(env)
-    if env_value is None:
-        print("Cannot retrieve environment variable '%s'" % env)
+    if env_value is None and error_if_missing:
+        print(f"Cannot retrieve environment variable '{env}'")
         sys.exit(1)
     return env_value
 
 
+def get_boto3_session():
+    """ Get a boto3 session """
+    profile = get_env_var(_PROFILE, error_if_missing=False)
+    if profile is None:
+        session = boto3.Session()
+    else:
+        session = boto3.Session(profile_name=profile)
+    return session
+
+
 def lambda_list_functions():
     """ Return a list of the Lambda functions in us-east-1 """
-    profile = get_env_var(_PROFILE)
-    session = boto3.Session(profile_name=profile)
+    session = get_boto3_session()
     client = session.client('lambda', 'us-east-1')
     return client.list_functions()["Functions"]
 
@@ -67,16 +76,16 @@ def function_needs_updating(rules_file):
     # Start by reading the proposed rules file because
     # if we can't read it, it is a build failure
     if os.path.isfile(rules_file):
-        with open(rules_file, 'r') as file:
+        with open(rules_file, 'r', encoding="utf=8") as file:
             proposed_file = file.read()
     else:
-        print("'%s' isn't a file" % rules_file)
+        print(f"'{rules_file}' isn't a file")
         sys.exit(1)
     # Does the function exist already on Lambda?
     if not lambda_func_exists():
         return True
     # Get the existing rules file from Lambda
-    session = boto3.Session(profile_name=get_env_var(_PROFILE))
+    session = get_boto3_session()
     client = session.client('lambda', 'us-east-1')
     response = client.get_function(
         FunctionName=lambda_func_from_var()
@@ -85,7 +94,7 @@ def function_needs_updating(rules_file):
     if response["Configuration"]["Runtime"] != _NODE_RUNTIME:
         return True
     # Download the zip file
-    result = requests.get(response["Code"]["Location"])
+    result = requests.get(response["Code"]["Location"], timeout=30)
     handle, zip_file = mkstemp(".zip")
     os.close(handle)
     with open(zip_file, 'wb') as file:
@@ -109,10 +118,10 @@ def function_needs_updating(rules_file):
 # See https://stackoverflow.com/a/48435482/305975
 def add_file_to_zip(ziphandle, source_file, zip_filename):
     """ Add the specified file to the zip file """
-    with open(source_file, "r") as handle:
+    with open(source_file, "r", encoding="utf-8") as handle:
         data = handle.read()
     info = zipfile.ZipInfo(zip_filename)
-    info.date_time = time.localtime() # type: ignore
+    info.date_time = time.localtime()  # type: ignore
     info.external_attr = 0o100644 << 16
     ziphandle.writestr(info, data)
 
@@ -138,7 +147,7 @@ def rebuild_zip_file(rules_file):
 
 def aws_account_id():
     """ Get the account ID for the specified profile """
-    session = boto3.Session(profile_name=get_env_var(_PROFILE))
+    session = get_boto3_session()
     client = session.client("sts")
     return client.get_caller_identity()["Account"]
 
@@ -147,7 +156,7 @@ def publish_zip_file(zip_file):
     """ Publish the zip file as a Lambda function """
     with open(zip_file, 'rb') as content_file:
         content = content_file.read()
-    session = boto3.Session(profile_name=get_env_var(_PROFILE))
+    session = get_boto3_session()
     client = session.client('lambda', 'us-east-1')
     if lambda_func_exists():
         # Update the code associated with the existing function
@@ -163,9 +172,10 @@ def publish_zip_file(zip_file):
     ver = ":" + response["Version"]
     if not func_arn.endswith(ver):
         func_arn += ver
-    print("Function arn: %s" % func_arn)
+    print(f"Function arn: {func_arn}")
     # Now add the CloudFront trigger ...
     add_cloudfront_trigger(session, func_arn)
+
 
 def add_cloudfront_trigger(session, func_arn):
     """ Point the CF origin request trigger at the function """
@@ -211,14 +221,15 @@ def add_cloudfront_trigger(session, func_arn):
             lfa_block["Items"].append(item_block)
             lfa_block["Quantity"] = lfa_block["Quantity"] + 1
             print(
-                "Adding redirect function, total of %s" %
-                lfa_block["Quantity"])
+                f'Adding redirect function, total of {lfa_block["Quantity"]}'
+                )
     cf_client.update_distribution(
         DistributionConfig=distrib_config,
         Id=get_env_var(_CFDIST),
         IfMatch=config["ETag"]
     )
     print("CloudFront distribution updated")
+
 
 def create_lambda_code(client, content):
     """ Create a brand new Lambda function """
@@ -249,6 +260,7 @@ def create_lambda_code(client, content):
     print("Lambda function created")
     return response
 
+
 def wait_for_update(client):
     """
     Wait for the Lambda update to finish before proceeding
@@ -261,8 +273,11 @@ def wait_for_update(client):
         last_state = result["Configuration"]["LastUpdateStatus"]
         if last_state == "Successful":
             return
-        print(f"Current Lambda update state is {last_state} ... sleeping for a bit")
+        print(
+            f"Current Lambda update state is {last_state}"
+            " ... sleeping for a bit")
         time.sleep(10)
+
 
 def update_lambda_code(client, content):
     """ Update the code associated with the existing function """
@@ -283,6 +298,7 @@ def update_lambda_code(client, content):
     )
     print("Lambda function updated")
     return response
+
 
 def main():
     """ Main! """
@@ -308,6 +324,7 @@ def main():
         publish_zip_file(zip_file)
     else:
         print("Skipping update of Lambda function")
+
 
 if __name__ == '__main__':
     main()

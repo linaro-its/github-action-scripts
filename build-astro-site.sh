@@ -59,7 +59,11 @@ function post_build_failed_preview(){
   fi
 }
 
-cd "$GITHUB_WORKSPACE/website" || exit 1
+cd "$GITHUB_WORKSPACE" || exit 1
+# Some websites are pulling into a website folder
+if [ -d "website" ]; then
+  cd website || exit 1
+fi
 setup_vars
 setup_testing
 build_site

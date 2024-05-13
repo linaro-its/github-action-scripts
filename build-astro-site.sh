@@ -5,10 +5,6 @@
 # if we use "set -e"
 
 function setup_vars(){
-    # The following vars are set from .github-env
-    # AWS_STATIC_SITE_URL
-    # JEKYLL_ENV
-    # SITE_URL
     PR_NUMBER=$(jq -r ".pull_request.number" $GITHUB_EVENT_PATH)
     STATUSES_URL=$(jq -r ".pull_request.statuses_url // empty" $GITHUB_EVENT_PATH)
 }
@@ -23,9 +19,6 @@ function setup_testing(){
 }
 
 function build_site(){
-  source ~/.nvm/nvm.sh
-  nvm use 18
-  npm install --global yarn
   yarn install
   if [ -d "dist" ]; then rm -Rf dist; fi
   yarn build

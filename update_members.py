@@ -24,19 +24,34 @@ import boto3
 import requests
 from git.repo import Repo
 from ldap3 import SUBTREE, Connection
-from linaro_vault_lib import get_vault_secret
+# from linaro_vault_lib import get_vault_secret
+import ssmparameterstorelib
 
 IMAGE_URL = "https://static.linaro.org/common/member-logos"
 GOT_ERROR = False
 INVALIDATE_CACHE = False
 
 
+# def initialise_ldap():
+#     """ Return a LDAP Connection """
+#     username = "cn=update-members,ou=binders,dc=linaro,dc=org"
+#     password = get_vault_secret(
+#         "secret/ldap/{}".format(username),
+#         iam_role="arn:aws:iam::968685071553:role/vault_update_members")
+#     return Connection(
+#             'ldaps://login.linaro.org',
+#             user=username,
+#             password=password,
+#             auto_bind="DEFAULT"
+#         )
+
+
 def initialise_ldap():
     """ Return a LDAP Connection """
     username = "cn=update-members,ou=binders,dc=linaro,dc=org"
-    password = get_vault_secret(
-        "secret/ldap/{}".format(username),
-        iam_role="arn:aws:iam::968685071553:role/vault_update_members")
+    password = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+        "/secret/ldap/update-members"
+    )
     return Connection(
             'ldaps://login.linaro.org',
             user=username,

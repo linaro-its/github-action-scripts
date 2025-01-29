@@ -12,7 +12,8 @@ import requests
 from ldap3 import SUBTREE, Connection
 from requests.auth import HTTPBasicAuth
 
-from linaro_vault_lib import get_vault_secret
+# from linaro_vault_lib import get_vault_secret
+import ssmparameterstorelib
 
 IMAGE_URL = "https://static.linaro.org/common/member-logos"
 SERVER = "https://linaro.atlassian.net/wiki"
@@ -124,12 +125,27 @@ def save_page(key, body):
         print("%s: Couldn't retrieve content" % key)
 
 
+# def initialise_ldap():
+#     """ Initialise a LDAP connection """
+#     global CONNECTION # pylint: disable=global-statement
+#     username = "cn=moinmoin,ou=binders,dc=linaro,dc=org"
+#     password = get_vault_secret("secret/ldap/{}".format(username),
+#                                 iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
+#     CONNECTION = Connection(
+#             'ldaps://login.linaro.org',
+#             user=username,
+#             password=password,
+#             auto_bind="DEFAULT"
+#         )
+
+
 def initialise_ldap():
     """ Initialise a LDAP connection """
     global CONNECTION # pylint: disable=global-statement
     username = "cn=moinmoin,ou=binders,dc=linaro,dc=org"
-    password = get_vault_secret("secret/ldap/{}".format(username),
-                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
+    password = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+         "/secret/ldap/moinmoin"         
+    )
     CONNECTION = Connection(
             'ldaps://login.linaro.org',
             user=username,
@@ -137,15 +153,26 @@ def initialise_ldap():
             auto_bind="DEFAULT"
         )
 
+# def initialise_confluence():
+#     """ Initialise the Confluence authentication """
+#     global AUTH # pylint: disable=global-statement
+#     username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
+#                                 iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation",
+#                                 key="id")
+#     password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
+#                                 iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
+#     AUTH = HTTPBasicAuth(username, password)
+
 
 def initialise_confluence():
     """ Initialise the Confluence authentication """
     global AUTH # pylint: disable=global-statement
-    username = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
-                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation",
-                                key="id")
-    password = get_vault_secret("secret/user/atlassian-cloud-it-support-bot",
-                                iam_role="arn:aws:iam::968685071553:role/vault_confluence_ldap_automation")
+    username = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+        "/secret/user/atlassian-cloud-it-support-bot", key="id"
+    )
+    password = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+        "/secret/user/atlassian-cloud-it-support-bot"         
+    )
     AUTH = HTTPBasicAuth(username, password)
 
 

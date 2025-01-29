@@ -5,7 +5,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 import json_generation_lib
-from linaro_vault_lib import get_vault_secret
+# from linaro_vault_lib import get_vault_secret
+import ssmparameterstorelib
 
 nesting_level = 0
 SCOPES = [
@@ -48,13 +49,28 @@ def create_json_object(delegated_creds):
                 json_blob["maintainers_by_company"].append({"name": row[0], "num": row[1] })
     return json_blob
 
+# def initialise_auth():
+#     # Username (email) of user to run scripts as.
+#     username = "kyle.kirkby@linaro.org"
+#     # Get the Google Service Account JSON blob
+#     google_service_account_json = json.loads(get_vault_secret(
+#         "secret/misc/google-gitmaintainerssync.json",
+#         iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater"))
+#     # Instantiate a new service account auth object
+#     service_account_auth = service_account.Credentials.from_service_account_info(
+#             google_service_account_json, scopes=SCOPES)
+#     delegated_creds = service_account_auth.with_subject(username)
+#     return delegated_creds
+
 def initialise_auth():
     # Username (email) of user to run scripts as.
     username = "kyle.kirkby@linaro.org"
     # Get the Google Service Account JSON blob
-    google_service_account_json = json.loads(get_vault_secret(
-        "secret/misc/google-gitmaintainerssync.json",
-        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater"))
+    google_service_account_json = json.loads(
+        ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+            "/secret/misc/google-gitmaintainerssync.json"
+        )
+    )
     # Instantiate a new service account auth object
     service_account_auth = service_account.Credentials.from_service_account_info(
             google_service_account_json, scopes=SCOPES)

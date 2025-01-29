@@ -8,7 +8,8 @@ import requests
 # from requests.auth import HTTPBasicAuth
 
 import json_generation_lib
-from linaro_vault_lib import get_vault_secret
+# from linaro_vault_lib import get_vault_secret
+import ssmparameterstorelib
 
 ADDED_TO_JSON = {}
 
@@ -62,16 +63,31 @@ IGNORE_MEMBERSHIP_MAPPINGS = {
     "Project Membership": "project"
 }
 
+# def initialise_auth():
+#     """ Return encoded authentication """
+#     username = get_vault_secret(
+#         "secret/user/atlassian-cloud-it-support-bot",
+#         iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
+#         key="id")
+#     password = get_vault_secret(
+#         "secret/user/atlassian-cloud-it-support-bot",
+#         iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
+#         key="pw")
+#     # Construct a string of the form username:password
+#     combo = "%s:%s" % (username, password)
+#     # Encode it to Base64
+#     combo_bytes = combo.encode('ascii')
+#     base64_bytes = base64.b64encode(combo_bytes)
+#     return base64_bytes.decode('ascii')
+
 def initialise_auth():
     """ Return encoded authentication """
-    username = get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot",
-        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
-        key="id")
-    password = get_vault_secret(
-        "secret/user/atlassian-cloud-it-support-bot",
-        iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater",
-        key="pw")
+    username = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+        "/secret/user/atlassian-cloud-it-support-bot", key="id"
+    )
+    password = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+        "/secret/user/atlassian-cloud-it-support-bot", key="pw"
+    )
     # Construct a string of the form username:password
     combo = "%s:%s" % (username, password)
     # Encode it to Base64

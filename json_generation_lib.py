@@ -3,9 +3,10 @@ import os
 import subprocess
 import sys
 import tempfile
+import ssmparameterstorelib
 
 from git.repo import Repo
-from linaro_vault_lib import get_vault_secret
+# from linaro_vault_lib import get_vault_secret
 
 def run_command(command):
     result = subprocess.run(
@@ -17,15 +18,33 @@ def run_command(command):
         sys.exit(1)
 
 
+# def run_git_command(command):
+#     # We do some funky stuff around the git command processing because we want
+#     # to keep the SSH key under tight control.
+#     # See https://stackoverflow.com/a/4565746/1233830
+
+#     # Fetch the SSH key from Vault and store it in a temporary file
+#     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
+#         pem = get_vault_secret("secret/misc/linaro-build-github.pem",
+#                                iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater")
+#         pem_file.write(pem)
+#         pkf = pem_file.name
+
+#     git_cmd = 'ssh-add "%s"; %s' % (pkf, command)
+#     full_cmd = "ssh-agent bash -c '%s'" % git_cmd
+#     run_command(full_cmd)
+#     os.remove(pkf)
+
 def run_git_command(command):
     # We do some funky stuff around the git command processing because we want
     # to keep the SSH key under tight control.
     # See https://stackoverflow.com/a/4565746/1233830
 
-    # Fetch the SSH key from Vault and store it in a temporary file
+    # Fetch the SSH key from SSM Parameter Store and store it in a temporary file
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as pem_file:
-        pem = get_vault_secret("secret/misc/linaro-build-github.pem",
-                               iam_role="arn:aws:iam::968685071553:role/vault_jira_project_updater")
+        pem = ssmparameterstorelib.get_secret_from_ssm_parameter_store(
+            "secret/misc/linaro-build-github.pem"             
+        )
         pem_file.write(pem)
         pkf = pem_file.name
 

@@ -19,6 +19,7 @@ metadata-parser = "*"
 hvac = "*"
 squad-client = "*"
 requests = ">=2.31.0"
+importlib-metadata = "*"
 
 [requires]
 python_version = "3.8"

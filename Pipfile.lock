@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "774c51a6b715f0ba2f212de6c378c6f820b057439328b59e9574980580c82c9c"
+            "sha256": "73ad66db88e70b3b6ef8e58697f8e5536a0228781cefea7b895ec2a98fac0afc"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -162,11 +162,11 @@
         },
         "beautifulsoup4": {
             "hashes": [
-                "sha256:1bd32405dacc920b42b83ba01644747ed77456a65760e285fbc47633ceddaf8b",
-                "sha256:99045d7d3f08f91f0d656bc9b7efbae189426cd913d830294a15eefa0ea4df16"
+                "sha256:9bbbb14bfde9d79f38b8cd5f8c7c85f4b8f2523190ebed90e950a8dea4cb1c4b",
+                "sha256:dbb3c4e1ceae6aefebdaf2423247260cd062430a410e38c66f2baa50a8437195"
             ],
             "markers": "python_full_version >= '3.7.0'",
-            "version": "==4.13.3"
+            "version": "==4.13.4"
         },
         "boto3": {
             "hashes": [
@@ -446,11 +446,11 @@
         },
         "gitpython": {
             "hashes": [
-                "sha256:9e0e10cda9bed1ee64bc9a6de50e7e38a9c9943241cd7f585f6df3ed28011110",
-                "sha256:c87e30b26253bf5418b01b0660f818967f3c503193838337fe5e573331249269"
+                "sha256:5f4c4187de49616d710a77e98ddf17b4782060a1788df441846bddefbb89ab33",
+                "sha256:f9b9ddc0761c125d5780eab2d64be4873fc6817c2899cbcb34b02344bdc7bc54"
             ],
             "index": "pypi",
-            "version": "==3.1.44"
+            "version": "==3.1.37"
         },
         "google-api-core": {
             "hashes": [
@@ -1457,11 +1457,11 @@
         },
         "dill": {
             "hashes": [
-                "sha256:468dff3b89520b474c0397703366b7b95eebe6303f108adf9b19da1f702be87a",
-                "sha256:81aa267dddf68cbfe8029c42ca9ec6a4ab3b22371d1c450abc54422577b4512c"
+                "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0",
+                "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049"
             ],
             "markers": "python_version < '3.11'",
-            "version": "==0.3.9"
+            "version": "==0.4.0"
         },
         "isort": {
             "hashes": [
